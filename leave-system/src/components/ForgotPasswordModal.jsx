@@ -6,7 +6,7 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Password reset requested for:", email);
+    console.log("Password reset requested for:");
     setSubmitted(true);
     
     // Reset form after 3 seconds

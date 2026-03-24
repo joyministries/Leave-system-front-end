@@ -91,7 +91,6 @@ export const applyLeave = async (leaveData) => {
 export const getAllLeaves = async () => {
   try {
     const response = await apiClient.get('/leaves/all');
-    console.log('All leaves response:', response.data);
     return response.data; // Return all leave data
   } catch (error) {
     throw new Error('Failed to fetch all leaves', { cause: error.message });
@@ -129,7 +128,6 @@ export const getPendingLeaves = async () => {
 export const getStatistics = async () => {
   try {
     const response = await apiClient.get('/leaves/statistics/');
-    console.log('Statistics response:', response.data);
     return response.data;
   } catch (error) {
     throw new Error('Failed to fetch statistics', { cause: error.message });

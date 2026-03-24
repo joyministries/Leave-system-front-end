@@ -21,30 +21,21 @@ export const useLoginRedirect = () => {
     /**
      * Redirect user to their appropriate dashboard based on role
      * @param {object} response - Login API response containing user and token
-     * @param {object} additionalData - Optional additional data to merge with user object
      */
-    const redirectToDashboard = (response, additionalData = {}) => {
+    const redirectToDashboard = (response = {}) => {
         try {
             // Extract token and user data from response
             const token = response?.token || response?.access;
             const userData = response?.user || response;
 
-            // Merge additional data (like email from login form)
-            const completeUserData = {
-                ...userData,
-                ...additionalData,
-                email: userData?.email || additionalData?.email,
-            };
-
             // Store in AuthContext
             if (loginContext) {
-                loginContext(completeUserData, token);
-                console.log('Logged in user:', completeUserData);
+                loginContext(userData, token);
             }
 
             // Get correct dashboard path based on role
-            const dashboardPath = getCorrectDashboardPath(completeUserData);
-            console.log(`Redirecting ${completeUserData.email} to ${dashboardPath}`);
+            const dashboardPath = getCorrectDashboardPath(userData);
+            console.log(`Redirecting ${userData.email} to ${dashboardPath}`);
 
             // Navigate to appropriate dashboard
             navigate(dashboardPath);
