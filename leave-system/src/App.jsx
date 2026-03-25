@@ -10,6 +10,7 @@ import AdminReports from "./pages/AdminReports.jsx";
 import AddEmployee from "./pages/AddEmployee.jsx";
 import AdminManageLeaves from "./pages/AdminManageLeaves.jsx";
 import AdminEmployeeManagement from "./pages/AdminEmployeeManagement.jsx";
+import AdminBranches from "./pages/AdminBranches.jsx";
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
       <Route path="/admin/reports" element={<AdminReports />} />
       <Route path="/admin/manage/leaves" element={<AdminManageLeaves />} />
       <Route path="/admin/manage/employees" element={<AdminEmployeeManagement />} />
+      <Route path="/admin/branches" element={<AdminBranches />} />
     </Routes>
   );
 }

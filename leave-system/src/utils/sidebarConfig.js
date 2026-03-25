@@ -67,6 +67,13 @@ export const ALL_MENU_ITEMS = [
         path: '/admin/manage/employees',
         allowedRoles: ['admin'],
         description: 'Manage employee accounts and roles'
+    },
+    {
+        id: 'admin-branches',
+        label: 'Branches',
+        path: '/admin/branches',
+        allowedRoles: ['admin'],
+        description: 'Manage university branches'
     }
 
 ];
