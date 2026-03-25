@@ -301,7 +301,7 @@ export const getMyLeaves = async () => {
 export const getLeaveTypes = async (searchParams = {}) => {
   try {
     const response = await apiClient.get('/leave-types/', { params: searchParams });
-    return response;
+    return response.data.results;
   } catch (error) {
     throw new Error('Failed to fetch leave types', { cause: error.message });
   }
@@ -310,14 +310,14 @@ export const getLeaveTypes = async (searchParams = {}) => {
 /**
  * Create Leave Type (HR/Admin Only)
  * POST /leave-types/
- * Request body: { name, description (optional), days_allowed }
+ * Request body: { name, max_days, is_active (optional) }
  */
 export const createLeaveType = async (leaveTypeData) => {
   try {
     const payload = {
       name: leaveTypeData.name,
-      description: leaveTypeData.description || '',
-      days_allowed: leaveTypeData.days_allowed,
+      max_days: leaveTypeData.max_days,
+      is_active: leaveTypeData.is_active !== undefined ? leaveTypeData.is_active : true,
     };
     const response = await apiClient.post('/leave-types/', payload);
     return response;

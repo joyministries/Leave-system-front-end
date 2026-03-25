@@ -15,7 +15,8 @@ export default function AdminManageLeaves() {
     const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState({
         name: '',
-        days_allowed: ''
+        max_days: '',
+        is_active: true
     });
 
     // Fetch leave types on component mount
@@ -50,7 +51,8 @@ export default function AdminManageLeaves() {
     const resetForm = () => {
         setFormData({
             name: '',
-            days_allowed: ''
+            max_days: '',
+            is_active: true
         });
         setEditingId(null);
         setShowForm(false);
@@ -65,7 +67,7 @@ export default function AdminManageLeaves() {
             showError('Leave type name is required');
             return;
         }
-        if (!formData.days_allowed || formData.days_allowed <= 0) {
+        if (!formData.max_days || formData.max_days <= 0) {
             showError('Maximum days must be greater than 0');
             return;
         }
@@ -77,18 +79,21 @@ export default function AdminManageLeaves() {
                 // Update existing leave type
                 await updateLeaveType(editingId, {
                     name: formData.name.trim(),
-                    days_allowed: parseInt(formData.days_allowed)
+                    max_days: parseInt(formData.max_days),
+                    is_active: formData.is_active
                 });
                 showSuccess('Leave type updated successfully!');
             } else {
                 console.log('Creating leave type with data:', {
                     name: formData.name.trim(),
-                    days_allowed: parseInt(formData.days_allowed)
+                    max_days: parseInt(formData.max_days),
+                    is_active: formData.is_active
                 });
                 // Create new leave type
                 await createLeaveType({
                     name: formData.name.trim(),
-                    days_allowed: parseInt(formData.days_allowed)
+                    max_days: parseInt(formData.max_days),
+                    is_active: formData.is_active
                 });
                 showSuccess('Leave type created successfully!');
             }
@@ -108,7 +113,8 @@ export default function AdminManageLeaves() {
     const handleEdit = (leaveType) => {
         setFormData({
             name: leaveType.name,
-            days_allowed: leaveType.max_days
+            max_days: leaveType.max_days,
+            is_active: leaveType.is_active
         });
         setEditingId(leaveType.id);
         setShowForm(true);
@@ -198,13 +204,40 @@ export default function AdminManageLeaves() {
                                         </label>
                                         <input
                                             type="number"
-                                            name="days_allowed"
-                                            value={formData.days_allowed}
+                                            name="max_days"
+                                            value={formData.max_days}
                                             onChange={handleInputChange}
                                             placeholder="e.g., 21"
                                             min="1"
                                             className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                         />
+                                    </div>
+
+                                    {/* Active Status Toggle */}
+                                    <div>
+                                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                            Status
+                                        </label>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({ ...prev, is_active: !prev.is_active }))}
+                                                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
+                                                    formData.is_active ? 'bg-green-500' : 'bg-slate-300'
+                                                }`}
+                                            >
+                                                <span
+                                                    className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                                                        formData.is_active ? 'translate-x-7' : 'translate-x-1'
+                                                    }`}
+                                                />
+                                            </button>
+                                            <span className={`text-sm font-medium ${
+                                                formData.is_active ? 'text-green-600' : 'text-slate-600'
+                                            }`}>
+                                                {formData.is_active ? 'Active' : 'Inactive'}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
 
