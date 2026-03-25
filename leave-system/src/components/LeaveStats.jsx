@@ -1,4 +1,4 @@
-import { getLeaveHistory } from "../services/ApiClient";
+import { getMyLeaves } from "../services/ApiClient";
 import { useAlert } from "../hooks/alerthook";
 import { useEffect, useState } from "react";
 
@@ -26,7 +26,7 @@ export default function LeaveStats() {
     useEffect(() => {
         const fetchLeaveDurations = async () => {
             try {
-                const data = await getLeaveHistory();
+                const data = await getMyLeaves();
                 // Handle both array and paginated response formats
                 const leaveData = Array.isArray(data) ? data : data.results || [];
                 

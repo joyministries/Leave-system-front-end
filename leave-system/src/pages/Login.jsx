@@ -31,9 +31,10 @@ export default function Login() {
       .then((response) => {
         showSuccess(JSON.stringify(response));
         // Extract token and user data from response
-        const token = response.data.token || response.data.access;
+        const token = response.data.access || response.data.access;
         // Try to get user object, fallback to entire response if no user object
-        const userData = response.data.user || response.data;
+        const userData = response.data.employee;
+        console.log('Login successful. User data:', userData);
 
         // Store token in localStorage
         if (token) {

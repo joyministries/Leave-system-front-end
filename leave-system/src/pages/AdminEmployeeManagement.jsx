@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAlert } from '../hooks/alerthook';
-import { listEmployees, deleteEmployee, updateEmployee } from '../services/ApiClient';
+import { deactivateEmployee, getEmployees, updateEmployee } from '../services/ApiClient';
 import ProtectedLayout from '../components/ProtectedLayout';
 
 export default function AdminEmployeeManagement() {
@@ -21,7 +21,7 @@ export default function AdminEmployeeManagement() {
     const fetchEmployees = useCallback(async () => {
         try {
             setIsLoading(true);
-            const data = await listEmployees();
+            const data = await getEmployees();
             const employeesArray = Array.isArray(data) ? data : data.results || [];
             setEmployees(employeesArray);
         } catch (error) {
@@ -64,7 +64,6 @@ export default function AdminEmployeeManagement() {
             first_name: employee.first_name,
             last_name: employee.last_name,
             email: employee.email,
-            employee_id: employee.employee_id,
             role: employee.role,
             department: employee.department || '',
             password: employee.password || '',
@@ -113,12 +112,12 @@ export default function AdminEmployeeManagement() {
     const handleDelete = async (id, name) => {
         if (window.confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) {
             try {
-                await deleteEmployee(id);
-                showSuccess('Employee deleted successfully!');
+                await deactivateEmployee(id);
+                showSuccess('Employee deactivated successfully!');
                 await fetchEmployees();
             } catch (error) {
-                console.error('Error deleting employee:', error);
-                showError('Failed to delete employee. Please try again.');
+                console.error('Error deactivating employee:', error);
+                showError('Failed to deactivate employee. Please try again.');
             }
         }
     };
@@ -423,8 +422,8 @@ export default function AdminEmployeeManagement() {
                                         type="text"
                                         name="employee_id"
                                         value={editFormData.employee_id || ''}
-                                        onChange={handleEditFormChange}
-                                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                        readOnly
+                                        className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-slate-100 cursor-not-allowed text-slate-600"
                                     />
                                 </div>
 

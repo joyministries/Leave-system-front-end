@@ -7,11 +7,12 @@ export const getUserRole = (user) => {
     if (!user) return 'guest';
 
     // Normalize employee_role for case-insensitive comparison
-    const normalizedRole = user.employee_role ? user.employee_role.toLowerCase() : '';
+    const normalizedRole = user.role ? user.role.toLowerCase() : '';
 
     if (
         normalizedRole.includes('hr') ||
         normalizedRole.includes('manager') ||
+        normalizedRole.includes('admin') ||
         user.is_superuser === true ||
         user.is_admin === true ||
         user.isAdmin === true

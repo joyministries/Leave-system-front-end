@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAlert } from '../hooks/alerthook';
-import { applyLeave, getLeavePolices } from '../services/ApiClient';
+import { applyLeave, getLeaveTypes } from '../services/ApiClient';
 
 export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
   const [formData, setFormData] = useState({
@@ -12,8 +12,8 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
     document: null,
   });
 
-  const [leavePolicies, setLeavePolicies] = useState([]);
-  const [selectedPolicyMaxDays, setSelectedPolicyMaxDays] = useState(null);
+  const [leaveTypes, setLeaveTypes] = useState([]);
+  const [selectedTypeMaxDays, setSelectedTypeMaxDays] = useState(null);
   const [daysRequested, setDaysRequested] = useState(0);
   const [exceedsLimit, setExceedsLimit] = useState(false);
   const [isLoadingPolicies, setIsLoadingPolicies] = useState(true);
@@ -48,14 +48,14 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
     const fetchPolicies = async () => {
       try {
         setIsLoadingPolicies(true);
-        const data = await getLeavePolices();
+        const data = await getLeaveTypes();
         const policiesArray = Array.isArray(data) ? data : data.results || [];
-        setLeavePolicies(policiesArray);
+        setLeaveTypes(policiesArray);
         
         // Set initial max days and ID for first policy
         if (policiesArray.length > 0) {
           const initialPolicy = policiesArray[0];
-          setSelectedPolicyMaxDays(initialPolicy.max_days);
+          setSelectedTypeMaxDays(initialPolicy.days_allowed);
           setFormData(prev => ({
             ...prev,
             leaveTypeId: initialPolicy.id,
@@ -73,21 +73,21 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
     if (isOpen) {
       fetchPolicies();
     }
-  }, [isOpen]);
+  }, [isOpen, showWarning]);
 
   const handleChange = (e) => {
     const { name, value, type, files } = e.target;
 
     if (name === 'leaveType') {
-      // Find the policy with matching ID
-      const selectedPolicy = leavePolicies.find(p => p.id === parseInt(value));
-      if (selectedPolicy) {
+      // Find the type with matching ID
+      const selectedType = leaveTypes.find(t => t.id === parseInt(value));
+      if (selectedType) {
         setFormData((prev) => ({
           ...prev,
-          leaveTypeId: selectedPolicy.id,
-          leaveTypeName: selectedPolicy.name,
+          leaveTypeId: selectedType.id,
+          leaveTypeName: selectedType.name,
         }));
-        setSelectedPolicyMaxDays(selectedPolicy.max_days);
+        setSelectedTypeMaxDays(selectedType.days_allowed);
       }
     } else if (name === 'startDate' || name === 'endDate') {
       setFormData((prev) => ({
@@ -102,7 +102,7 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
       setDaysRequested(days);
 
       // Check if exceeds limit
-      if (selectedPolicyMaxDays && days > selectedPolicyMaxDays) {
+      if (selectedTypeMaxDays && days > selectedTypeMaxDays) {
         setExceedsLimit(true);
       } else {
         setExceedsLimit(false);
@@ -120,7 +120,7 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
 
     // Validate date range
     if (exceedsLimit) {
-      showError(`You cannot request more than ${selectedPolicyMaxDays} days for this leave type.`);
+      showError(`You cannot request more than ${selectedTypeMaxDays} days for this leave type.`);
       return;
     }
 
@@ -161,10 +161,10 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
       showSuccess('Leave request submitted successfully!');
 
       // Reset form to first policy
-      const firstPolicy = leavePolicies[0];
+      const firstType = leaveTypes[0];
       setFormData({
-        leaveTypeId: firstPolicy?.id || null,
-        leaveTypeName: firstPolicy?.name || '',
+        leaveTypeId: firstType?.id || null,
+        leaveTypeName: firstType?.name || '',
         startDate: '',
         endDate: '',
         reason: '',
@@ -269,13 +269,13 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
                   required
                 >
                   <option value="">Select a leave type</option>
-                  {leavePolicies.map(policy => (
-                    <option key={policy.id} value={policy.id}>{policy.name}</option>
+                  {leaveTypes.map(type => (
+                    <option key={type.id} value={type.id}>{type.name}</option>
                   ))}
                 </select>
-                {selectedPolicyMaxDays && (
+                {selectedTypeMaxDays && (
                   <p className="text-xs text-slate-600 mt-2">
-                    Maximum allowed: <span className="font-semibold">{selectedPolicyMaxDays} days/year</span>
+                    Maximum allowed: <span className="font-semibold">{selectedTypeMaxDays} days/year</span>
                   </p>
                 )}
               </div>
@@ -317,14 +317,14 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
                   <p className={`text-sm font-semibold ${exceedsLimit ? 'text-red-700' : 'text-blue-700'}`}>
                     {daysRequested} day{daysRequested !== 1 ? 's' : ''} requested
                   </p>
-                  {exceedsLimit && selectedPolicyMaxDays && (
+                  {exceedsLimit && selectedTypeMaxDays && (
                     <p className="text-xs text-red-600 mt-1">
-                      ⚠️ Exceeds limit of {selectedPolicyMaxDays} days
+                      ⚠️ Exceeds limit of {selectedTypeMaxDays} days
                     </p>
                   )}
-                  {!exceedsLimit && selectedPolicyMaxDays && (
+                  {!exceedsLimit && selectedTypeMaxDays && (
                     <p className="text-xs text-blue-600 mt-1">
-                      ✓ {selectedPolicyMaxDays - daysRequested} day{selectedPolicyMaxDays - daysRequested !== 1 ? 's' : ''} remaining
+                      ✓ {selectedTypeMaxDays - daysRequested} day{selectedTypeMaxDays - daysRequested !== 1 ? 's' : ''} remaining
                     </p>
                   )}
                 </div>

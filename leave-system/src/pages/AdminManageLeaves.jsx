@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAlert } from '../hooks/alerthook';
-import { createLeavePolicy, updateLeavePolicy, deleteLeavePolicy, getLeavePolices } from '../services/ApiClient';
+import { getLeaveTypes, updateLeaveType, deleteLeaveType, createLeaveType} from '../services/ApiClient';
 import ProtectedLayout from '../components/ProtectedLayout';
 
 export default function AdminManageLeaves() {
@@ -15,8 +15,7 @@ export default function AdminManageLeaves() {
     const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState({
         name: '',
-        code: '',
-        max_days: '',
+        days_allowed: '',
         description: ''
     });
 
@@ -24,7 +23,7 @@ export default function AdminManageLeaves() {
     const fetchLeaveTypes = useCallback(async () => {
         try {
             setIsLoading(true);
-            const data = await getLeavePolices();
+            const data = await getLeaveTypes();
             const leaveTypesArray = Array.isArray(data) ? data : data.results || [];
             setLeaveTypes(leaveTypesArray);
         } catch (error) {
@@ -52,8 +51,7 @@ export default function AdminManageLeaves() {
     const resetForm = () => {
         setFormData({
             name: '',
-            code: '',
-            max_days: '',
+            days_allowed: '',
             description: ''
         });
         setEditingId(null);
@@ -69,11 +67,7 @@ export default function AdminManageLeaves() {
             showError('Leave type name is required');
             return;
         }
-        if (!formData.code.trim()) {
-            showError('Leave code is required');
-            return;
-        }
-        if (!formData.max_days || formData.max_days <= 0) {
+        if (!formData.days_allowed || formData.days_allowed <= 0) {
             showError('Maximum days must be greater than 0');
             return;
         }
@@ -83,19 +77,17 @@ export default function AdminManageLeaves() {
 
             if (editingId) {
                 // Update existing leave type
-                await updateLeavePolicy(editingId, {
+                await updateLeaveType(editingId, {
                     name: formData.name.trim(),
-                    code: formData.code.trim().toUpperCase(),
-                    max_days: parseInt(formData.max_days),
+                    days_allowed: parseInt(formData.days_allowed),
                     description: formData.description.trim()
                 });
                 showSuccess('Leave type updated successfully!');
             } else {
                 // Create new leave type
-                await createLeavePolicy({
+                await createLeaveType({
                     name: formData.name.trim(),
-                    code: formData.code.trim().toUpperCase(),
-                    max_days: parseInt(formData.max_days),
+                    days_allowed: parseInt(formData.days_allowed),
                     description: formData.description.trim()
                 });
                 showSuccess('Leave type created successfully!');
@@ -116,8 +108,7 @@ export default function AdminManageLeaves() {
     const handleEdit = (leaveType) => {
         setFormData({
             name: leaveType.name,
-            code: leaveType.code,
-            max_days: leaveType.max_days,
+            days_allowed: leaveType.days_allowed,
             description: leaveType.description || ''
         });
         setEditingId(leaveType.id);
@@ -128,7 +119,7 @@ export default function AdminManageLeaves() {
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this leave type? This action cannot be undone.')) {
             try {
-                await deleteLeavePolicy(id);
+                await deleteLeaveType(id);
                 showSuccess('Leave type deleted successfully!');
                 await fetchLeaveTypes();
             } catch (error) {
@@ -189,22 +180,6 @@ export default function AdminManageLeaves() {
                                         />
                                     </div>
 
-                                    {/* Leave Type Code */}
-                                    <div>
-                                        <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                            Leave Code *
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="code"
-                                            value={formData.code}
-                                            onChange={handleInputChange}
-                                            placeholder="e.g., ANN, SICK, STUDY"
-                                            maxLength="10"
-                                            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                        />
-                                    </div>
-
                                     {/* Maximum Days */}
                                     <div>
                                         <label className="block text-sm font-semibold text-slate-700 mb-2">
@@ -212,8 +187,8 @@ export default function AdminManageLeaves() {
                                         </label>
                                         <input
                                             type="number"
-                                            name="max_days"
-                                            value={formData.max_days}
+                                            name="days_allowed"
+                                            value={formData.days_allowed}
                                             onChange={handleInputChange}
                                             placeholder="e.g., 21"
                                             min="1"
@@ -325,14 +300,13 @@ export default function AdminManageLeaves() {
                                     {/* Card Header */}
                                     <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-4">
                                         <h3 className="text-lg font-bold text-white mb-1">{leaveType.name}</h3>
-                                        <p className="text-blue-100 text-sm font-medium">Code: {leaveType.code}</p>
                                     </div>
 
                                     {/* Card Body */}
                                     <div className="p-4">
                                         <div className="mb-4">
                                             <div className="flex items-baseline gap-2 mb-2">
-                                                <p className="text-3xl font-bold text-blue-600">{leaveType.max_days}</p>
+                                                <p className="text-3xl font-bold text-blue-600">{leaveType.days_allowed}</p>
                                                 <p className="text-slate-600 text-sm">days/year</p>
                                             </div>
                                             {leaveType.description && (

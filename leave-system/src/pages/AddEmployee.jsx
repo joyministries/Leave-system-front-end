@@ -20,7 +20,7 @@ export default function AddEmployee() {
     department: '',
     position: '',
     role: '',
-    phoneNumber: '',
+    institution: '',
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -72,16 +72,21 @@ export default function AddEmployee() {
       return;
     }
 
+    if (!formData.institution.trim()) {
+      showWarning('Institution is required');
+      return;
+    }
+
     // Prepare data for API - using field names the backend expects
     const employeeData = {
       first_name: formData.firstName,
       last_name: formData.lastName,
       email: formData.email,
       password: formData.password,
-      employee_department: formData.department,
-      employee_position: formData.position,
+      department: formData.department,
+      position: formData.position,
       role: formData.role,
-      phone_number: formData.phoneNumber,
+      institution: formData.institution,
     };
 
     setIsLoading(true);
@@ -100,7 +105,7 @@ export default function AddEmployee() {
             department: '',
             position: '',
             role: '',
-            phoneNumber: '',
+            institution: '',
           });
           // Navigate back to admin dashboard after a short delay
           setTimeout(() => {
@@ -242,24 +247,24 @@ export default function AddEmployee() {
                 </div>
               </div>
 
-              {/* Phone Number */}
+              {/* Institution */}
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Phone Number</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Institution *</label>
                 <input
-                  type="tel"
-                  name="phoneNumber"
-                  value={formData.phoneNumber}
+                  type="text"
+                  name="institution"
+                  value={formData.institution}
                   onChange={handleChange}
-                  placeholder="e.g., +27 71 234 5678"
-                  className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:ring-2 outline-none transition-all ${fieldErrors.phoneNumber
+                  placeholder="e.g., Institution ID or name"
+                  className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:ring-2 outline-none transition-all ${fieldErrors.institution
                     ? 'border-red-400 focus:ring-red-300 bg-red-50'
                     : 'border-slate-200 focus:ring-blue-500'
                     }`}
                   disabled={isLoading}
                   required
                 />
-                {fieldErrors.phoneNumber && (
-                  <p className="text-red-500 text-xs mt-1 font-medium">{fieldErrors.phoneNumber}</p>
+                {fieldErrors.institution && (
+                  <p className="text-red-500 text-xs mt-1 font-medium">{fieldErrors.institution}</p>
                 )}
               </div>
 

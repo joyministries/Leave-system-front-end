@@ -2,7 +2,7 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/authhook';
 import { useAlert } from '../hooks/alerthook';
 import { useEffect, useState } from 'react';
-import { getLeaveHistory } from '../services/ApiClient';
+import { getMyLeaves } from '../services/ApiClient';
 import { getUserDisplayName } from '../utils/userUtils';
 import ProtectedLayout from '../components/ProtectedLayout';
 import LeaveStats from '../components/LeaveStats';
@@ -11,7 +11,7 @@ import ApplyLeaveModal from '../components/ApplyLeaveModal';
 export default function Dashboard() {
     const location = useLocation();
     const { user } = useAuth();
-    const { showError, showSuccess } = useAlert();
+    const { showError, showSuccess, showInfo } = useAlert();
     const [leaveRequests, setLeaveRequests] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -28,7 +28,11 @@ export default function Dashboard() {
     useEffect(() => {
         const fetchLeaveRequests = async () => {
             try {
-                const data = await getLeaveHistory();
+                const data = await getMyLeaves();
+                if (!data){
+                    showInfo('No leave requests found.');
+                    return;
+                }
                 // Handle both array and paginated response formats
                 const leaveData = Array.isArray(data) ? data : data.results || [];
 
@@ -43,12 +47,12 @@ export default function Dashboard() {
                 setLeaveRequests(formattedLeaveData);
             } catch (error) {
                 console.error('Error fetching leave requests:', error);
-                showError('Failed to load leave requests. Please try again.');
+
             }
         };
 
         fetchLeaveRequests();
-    }, [showError]);
+    }, [showInfo]);
 
     const handleApplyLeaveClick = () => {
         setIsModalOpen(true);
@@ -142,7 +146,7 @@ export default function Dashboard() {
                     // Refresh leave requests
                     const fetchLeaveRequests = async () => {
                         try {
-                            const data = await getLeaveHistory();
+                            const data = await getMyLeaves();
                             const leaveData = Array.isArray(data) ? data : data.results || [];
 
                             // Filter out any undefined/null entries

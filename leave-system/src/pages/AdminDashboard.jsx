@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/authhook';
 import { useAlert } from '../hooks/alerthook';
 import { useEffect, useState } from 'react';
-import { getLeaveHistory } from '../services/ApiClient';
+import { listLeaves, getMyLeaves } from '../services/ApiClient';
 import { getUserDisplayName } from '../utils/userUtils';
 import ProtectedLayout from '../components/ProtectedLayout';
 import LeaveStats from '../components/LeaveStats';
@@ -29,7 +29,7 @@ export default function Dashboard() {
     useEffect(() => {
         const fetchLeaveRequests = async () => {
             try {
-                const data = await getLeaveHistory();
+                const data = await listLeaves();
                 // Handle both array and paginated response formats
                 const leaveData = Array.isArray(data) ? data : data.results || [];
 
@@ -151,7 +151,7 @@ export default function Dashboard() {
                     // Refresh leave requests
                     const fetchLeaveRequests = async () => {
                         try {
-                            const data = await getLeaveHistory();
+                            const data = await getMyLeaves();
                             const leaveData = Array.isArray(data) ? data : data.results || [];
                             const formattedLeaveData = leaveData.map(leave => ({
                                 ...leave,

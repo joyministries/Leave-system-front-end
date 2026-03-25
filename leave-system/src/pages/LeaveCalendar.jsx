@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/authhook';
 import { useAlert } from '../hooks/alerthook';
-import { getLeaveHistory } from '../services/ApiClient';
+import { getMyLeaves } from '../services/ApiClient';
 import { getUserDisplayName, getUserEmail } from '../utils/userUtils';
 import ProtectedLayout from '../components/ProtectedLayout';
 
@@ -18,7 +18,9 @@ export default function LeaveCalendar() {
     const fetchLeaveEvents = async () => {
       try {
         setIsLoading(true);
-        const data = await getLeaveHistory();
+        const data = await getMyLeaves();
+
+        if (data) {
         // Handle both array and paginated response formats
         const leaveData = Array.isArray(data) ? data : data.results || [];
         
@@ -32,9 +34,11 @@ export default function LeaveCalendar() {
         }));
         
         setLeaveEvents(events);
+      } else {
+        showError('No leave data found.');
+      }
       } catch (error) {
         console.error('Error fetching leave events:', error);
-        showError('Failed to load leave calendar.');
       } finally {
         setIsLoading(false);
       }

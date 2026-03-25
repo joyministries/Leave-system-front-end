@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { getAllLeaves } from '../services/ApiClient';
+import { getMyLeaves } from '../services/ApiClient';
 import { useAlert } from '../hooks/alerthook';
 import ProtectedLayout from '../components/ProtectedLayout';
 
@@ -81,7 +81,12 @@ export default function MyRequests() {
   useEffect(() => {
     const fetchLeaveHistory = async () => {
       try {
-        const leaveData = await getAllLeaves();
+
+        const leaveData = await getMyLeaves();
+        if (!leaveData) {
+          showError('No leave data found.');
+          return;
+        }
         // Handle both array and paginated response formats
         const requestsList = Array.isArray(leaveData) ? leaveData : leaveData.results || [];
         // Filter out any undefined/null entries
@@ -94,7 +99,7 @@ export default function MyRequests() {
     };
 
     fetchLeaveHistory();
-  }, []);
+  }, [showError]);
 
   // Categorize requests by status
   const getRequestsByStatus = (status) => {

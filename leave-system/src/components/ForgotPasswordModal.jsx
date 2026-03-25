@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { passwordResetRequest } from '../services/ApiClient';
+import { setPassword } from '../services/ApiClient';
 import { useAlert } from '../hooks/alerthook';
 
 export default function ForgotPasswordModal({ isOpen, onClose, userEmail }) {
@@ -16,7 +16,7 @@ export default function ForgotPasswordModal({ isOpen, onClose, userEmail }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     showInfo('Sending password reset email...');
-    passwordResetRequest(email)
+    setPassword(email)
       .then(() => {
         showSuccess('Password reset email sent successfully!');
         setSubmitted(true);

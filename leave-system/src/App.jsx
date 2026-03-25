@@ -14,7 +14,7 @@ import AdminEmployeeManagement from "./pages/AdminEmployeeManagement.jsx";
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Login />} />
+      <Route path="/login" element={<Login />} />
 
       {/* Protected Employee Routes */}
       <Route path="/dashboard" element={<Dashboard />} />

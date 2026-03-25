@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAlert } from '../hooks/alerthook';
-import { getPendingLeaves, updateLeaveData } from '../services/ApiClient';
+import { getPendingLeaves, updateLeave } from '../services/ApiClient';
 import ProtectedLayout from '../components/ProtectedLayout';
 
 export default function AdminApplications() {
@@ -186,14 +186,14 @@ export default function AdminApplications() {
 }
 
 // Extracted ApplicationRow component to isolate edit state and prevent massive re-renders
-function ApplicationRow({ app, onUpdateSuccess, calculateDays, showWarning, showSuccess, showError }) {
+function ApplicationRow({ app, onUpdateSuccess, calculateDays, showSuccess, showError }) {
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Handle approve action
   const handleApprove = async () => {
     setIsProcessing(true);
     try {
-      await updateLeaveData(app.id, { status: 'APPROVED' });
+      await updateLeave(app.id, { status: 'APPROVED' });
       onUpdateSuccess({ ...app, status: 'Approved' });
       showSuccess('Leave application approved successfully!');
     } catch (error) {
@@ -208,7 +208,7 @@ function ApplicationRow({ app, onUpdateSuccess, calculateDays, showWarning, show
   const handleReject = async () => {
     setIsProcessing(true);
     try {
-      await updateLeaveData(app.id, { status: 'REJECTED' });
+      await updateLeave(app.id, { status: 'REJECTED' });
       onUpdateSuccess({ ...app, status: 'Rejected' });
       showSuccess('Leave application rejected successfully!');
     } catch (error) {
