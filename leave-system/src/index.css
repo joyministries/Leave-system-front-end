@@ -1,1 +1,33 @@
 @import "tailwindcss";
+
+/* Mobile-friendly base styles */
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Ensure root element is full viewport */
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Touch-friendly buttons and inputs */
+@media (max-width: 768px) {
+  button, input, textarea, select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Better spacing on mobile */
+  button, a {
+    touch-action: manipulation;
+  }
+}

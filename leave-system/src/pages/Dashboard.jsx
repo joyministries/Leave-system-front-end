@@ -65,21 +65,21 @@ export default function Dashboard() {
             currentPath={location.pathname}
         >
             {/* Welcome Banner */}
-            <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-lg mb-8">
-                <h1 className="text-3xl font-bold">{greetingText}</h1>
-                <p className="text-blue-100 mt-2">{subtitleText}</p>
+            <div className="bg-slate-900 text-white p-4 sm:p-6 rounded-lg sm:rounded-2xl shadow-lg mb-6 sm:mb-8">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">{greetingText}</h1>
+                <p className="text-blue-100 mt-2 text-sm sm:text-base">{subtitleText}</p>
             </div>
 
             {/* Leave Stats Grid */}
-            <div className="mb-8">
-                <h2 className="text-2xl font-bold text-slate-900 mb-4">Your Current Leaves</h2>
+            <div className="mb-6 sm:mb-8">
+                <h2 className="text-lg sm:text-2xl font-bold text-slate-900 mb-3 sm:mb-4">Your Current Leaves</h2>
                 <LeaveStats />
             </div>
 
             {/* Leave Requests Table */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="px-4 md:px-6 py-4 md:py-6 border-b border-slate-200">
-                    <h2 className="text-lg font-bold text-slate-900">Recent Requests</h2>
+            <div className="bg-white rounded-lg sm:rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-6 border-b border-slate-200">
+                    <h2 className="text-base sm:text-lg font-bold text-slate-900">Recent Requests</h2>
                 </div>
 
                 <div className="overflow-x-auto">

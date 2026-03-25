@@ -45,7 +45,7 @@ export default function SideBar({
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="w-64 bg-slate-900 text-white hidden md:flex flex-col">
+      <aside className="w-64 sm:w-64 w-72 bg-slate-900 text-white hidden md:flex flex-col">
         <div className="p-6 text-xl font-bold border-b border-slate-800 tracking-tight">{branding}</div>
         <nav className="flex-1 p-4 space-y-2">
           {menuItems.length > 0 ? (

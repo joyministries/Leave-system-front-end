@@ -53,6 +53,9 @@ export default function LeaveStats() {
                         }
                     }
                     
+                    // Calculate remaining days
+                    const remainingDays = Math.max(totalLeaveDays - totalUsedDays, 0);
+                    
                     // Calculate progress percentage
                     const progressPercentage = Math.min((totalUsedDays / totalLeaveDays) * 100, 100);
                     
@@ -60,6 +63,7 @@ export default function LeaveStats() {
                         ...leave,
                         totalLeaveDays,
                         totalUsedDays,
+                        remainingDays,
                         progressPercentage,
                     };
                 });
@@ -132,26 +136,64 @@ export default function LeaveStats() {
         return 'bg-slate-500';
     };
 
+    const getReminderAlert = (remainingDays) => {
+        if (remainingDays === 3) {
+            return {
+                show: true,
+                message: '⏰ 3 days remaining!',
+                color: 'bg-orange-50 border-orange-200 text-orange-800',
+                icon: '⏰',
+            };
+        } else if (remainingDays === 2) {
+            return {
+                show: true,
+                message: '⏰ 2 days remaining!',
+                color: 'bg-orange-100 border-orange-300 text-orange-900',
+                icon: '⏰',
+            };
+        } else if (remainingDays === 1) {
+            return {
+                show: true,
+                message: '🚨 1 day remaining!',
+                color: 'bg-red-100 border-red-300 text-red-900',
+                icon: '🚨',
+            };
+        }
+        return { show: false };
+    };
+
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-10">
-            {leaveDurations.map((leave) => (
+            {leaveDurations.map((leave) => {
+                const reminder = getReminderAlert(leave.remainingDays);
+                return (
                 <div 
                     key={leave.id} 
-                    className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow"
+                    className={`bg-white p-4 md:p-6 rounded-2xl shadow-sm border-2 transition-all ${
+                        reminder.show ? 'border-orange-300 shadow-md' : 'border-slate-200 hover:shadow-md'
+                    }`}
                 >
+                    {/* Reminder Alert */}
+                    {reminder.show && (
+                        <div className={`${reminder.color} px-3 py-2 rounded-lg mb-4 border text-sm font-bold flex items-center gap-2`}>
+                            <span>{reminder.icon}</span>
+                            {reminder.message}
+                        </div>
+                    )}
+
                     {/* Leave Type Header */}
                     <div className="flex items-start justify-between mb-3">
                         <h3 className="text-lg font-bold text-slate-900">
                             {getLeaveTypeLabel(leave.leave_type || leave.type)}
                         </h3>
                         <span className="text-xl font-black text-blue-600">
-                            {leave.totalLeaveDays}
+                            {leave.remainingDays}
                         </span>
                     </div>
                     
                     {/* Days label */}
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">
-                        {leave.totalLeaveDays} days
+                        {leave.remainingDays} day{leave.remainingDays !== 1 ? 's' : ''} remaining
                     </p>
 
                     {/* Progress Bar */}
@@ -175,7 +217,8 @@ export default function LeaveStats() {
                         {formatDate(leave.start_date)} — {formatDate(leave.end_date)}
                     </p>
                 </div>
-            ))}
+            );
+            })}
         </div>
     );
 }

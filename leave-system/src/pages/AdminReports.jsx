@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getStatistics } from '../services/ApiClient';
+import { getStatistics, getAllEmployees } from '../services/ApiClient';
 import ProtectedLayout from '../components/ProtectedLayout';
 
 export default function AdminReports() {
@@ -9,6 +9,7 @@ export default function AdminReports() {
   const [reportType, setReportType] = useState('summary');
   const [isLoading, setIsLoading] = useState(true);
   const [statistics, setStatistics] = useState(null);
+  const [employees, setEmployees] = useState([]);
 
   const fetchLeaveData = async () => {
     try {
@@ -52,8 +53,18 @@ export default function AdminReports() {
     }
   };
 
+  const fetchEmployeesData = async () => {
+    try {
+      const data = await getAllEmployees();
+      setEmployees(Array.isArray(data) ? data : data.results || []);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  };
+
   useEffect(() => {
     fetchLeaveData();
+    fetchEmployeesData();
   }, []);
   
   const downloadPDF = () => {
@@ -133,6 +144,7 @@ export default function AdminReports() {
               className="px-4 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
             >
               <option value="summary">Summary Report</option>
+              <option value="employees">All Employees</option>
               <option value="department">Department Statistics</option>
               <option value="monthly">Monthly Statistics</option>
               <option value="leaveType">Leave Type Statistics</option>
@@ -228,6 +240,60 @@ export default function AdminReports() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Department Statistics */}
+          {reportType === 'employees' && (
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+              {/* Summary Card */}
+              <div className="bg-blue-50 border-b border-slate-200 p-4">
+                <p className="text-blue-900 font-semibold">
+                  All Employees in the System ({employees.length})
+                </p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-slate-100 border-b border-slate-200">
+                      <th className="px-4 sm:px-6 py-4 text-left text-xs font-bold text-slate-900">Name</th>
+                      <th className="px-4 sm:px-6 py-4 text-left text-xs font-bold text-slate-900">Email</th>
+                      <th className="hidden md:table-cell px-4 sm:px-6 py-4 text-left text-xs font-bold text-slate-900">Department</th>
+                      <th className="hidden lg:table-cell px-4 sm:px-6 py-4 text-left text-xs font-bold text-slate-900">Position</th>
+                      <th className="hidden sm:table-cell px-4 sm:px-6 py-4 text-left text-xs font-bold text-slate-900">Date Added</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {employees.length > 0 ? (
+                      employees.map((emp, idx) => (
+                        <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50 transition">
+                          <td className="px-4 sm:px-6 py-4 text-sm font-semibold text-slate-900">
+                            {emp.first_name} {emp.last_name}
+                          </td>
+                          <td className="px-4 sm:px-6 py-4 text-sm text-slate-600 truncate">
+                            {emp.email}
+                          </td>
+                          <td className="hidden md:table-cell px-4 sm:px-6 py-4 text-sm text-slate-600">
+                            {emp.department || 'N/A'}
+                          </td>
+                          <td className="hidden lg:table-cell px-4 sm:px-6 py-4 text-sm text-slate-600">
+                            {emp.position || 'N/A'}
+                          </td>
+                          <td className="hidden sm:table-cell px-4 sm:px-6 py-4 text-sm text-slate-600">
+                            {emp.date_added ? new Date(emp.date_added).toLocaleDateString() : 'N/A'}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="5" className="px-4 sm:px-6 py-8 text-center text-slate-500">
+                          No employees found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}

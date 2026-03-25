@@ -44,29 +44,30 @@ export default function ProtectedLayout({ children, title, subtitle, action }) {
       />
 
       {/* Main Content */}
-      <main className="flex-1 p-4 md:p-8 w-full">
+      <main className="flex-1 p-3 sm:p-4 md:p-8 w-full">
         {/* Header */}
         {title && (
-          <header className="flex justify-between items-center mb-8">
-            <div className="flex items-center gap-4">
+          <header className="flex justify-between items-start md:items-center mb-6 sm:mb-8 gap-3 flex-wrap">
+            <div className="flex items-start gap-3 flex-1 min-w-0">
               {/* Hamburger Menu Button - Mobile Only */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="md:hidden text-2xl text-slate-900 hover:text-slate-700 transition"
+                className="md:hidden text-2xl text-slate-900 hover:bg-slate-100 p-2 rounded-lg transition flex-shrink-0 mt-1"
+                title="Toggle menu"
               >
                 <GiHamburgerMenu />
               </button>
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">{title}</h1>
-                {subtitle && <p className="text-slate-500 mt-1 text-sm">{subtitle}</p>}
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-slate-900 tracking-tight truncate">{title}</h1>
+                {subtitle && <p className="text-slate-500 mt-1 text-xs sm:text-sm truncate">{subtitle}</p>}
               </div>
             </div>
             {action && (
-              <div>
+              <div className="flex-shrink-0 w-full sm:w-auto">
                 {typeof action === 'object' && action?.label ? (
                   <button
                     onClick={action.onClick}
-                    className="px-4 py-2 bg-slate-900 hover:bg-blue-700 text-white rounded-lg font-medium transition"
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-2.5 bg-slate-900 hover:bg-blue-700 text-white rounded-lg font-medium transition text-sm sm:text-base min-h-[44px] flex items-center justify-center"
                   >
                     {action.label}
                   </button>
