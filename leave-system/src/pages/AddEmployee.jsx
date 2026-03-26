@@ -3,13 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAlert } from '../hooks/alerthook';
 import { createEmployee, getInstitutions } from '../services/ApiClient';
 import ProtectedLayout from '../components/ProtectedLayout';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 export default function AddEmployee() {
   const navigate = useNavigate();
   const { showSuccess, showError, showWarning } = useAlert();
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [branchOptions, setBranchOptions] = useState([]);
 
    // Fetch branches for institution dropdown on component mount
@@ -31,8 +28,7 @@ export default function AddEmployee() {
     firstName: '',
     lastName: '',
     email: '',
-    password: '',
-    confirmPassword: '',
+    phoneNumber: '',
     department: '',
     position: '',
     role: '',
@@ -68,16 +64,6 @@ export default function AddEmployee() {
       return;
     }
 
-    if (formData.password.length < 8) {
-      showWarning('Password must be at least 8 characters');
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      showWarning('Passwords do not match!');
-      return;
-    }
-
     if (!formData.department.trim()) {
       showWarning('Department is required');
       return;
@@ -98,7 +84,7 @@ export default function AddEmployee() {
       first_name: formData.firstName,
       last_name: formData.lastName,
       email: formData.email,
-      password: formData.password,
+      phone_number: formData.phoneNumber,
       department: formData.department,
       position: formData.position,
       role: formData.role.toUpperCase(),
@@ -109,16 +95,15 @@ export default function AddEmployee() {
 
     createEmployee(employeeData)
       .then((response) => {
-          if (response.statusText === 'OK') {
-            showSuccess(response.data.results.message || `Employee created successfully!`);
+          if (response.statusText === "Created") {
+            showSuccess( `Employee created successfully!`);
           
           // Reset form
           setFormData({
             firstName: '',
             lastName: '',
             email: '',
-            password: '',
-            confirmPassword: '',
+            phoneNumber: '',
             department: '',
             position: '',
             role: '',
@@ -133,17 +118,8 @@ export default function AddEmployee() {
           }
         })
       .catch((error) => {
-        const data = error.response?.error || error.response.data || error.message || 'An unexpected error occurred. Please try again.';
-        if (data && typeof data === 'object') {
-
-          if (data.status === 0 || data.message) {
-            showError(data.message || 'Failed to create employee')
-            console.error('Backend exception', data.data)
-            setFieldErrors(data.data || {});
-            setFormData((prev) => ({ ...prev, password: '', confirmPassword: '' })); // Clear passwords on error
-            return;
-          }
-        }
+        showError("An error occurred while creating the employee. Please check the form and try again.");
+        console.error('Error creating employee:', error);
 
       })
       .finally(() => {
@@ -152,12 +128,10 @@ export default function AddEmployee() {
             firstName: '',
             lastName: '',
             email: '',
-            password: '',
-            confirmPassword: '',
+            phoneNumber: '',
             department: '',
             position: '',
             role: '',
-            phoneNumber: '',
             institution: ''
           });
          setFieldErrors({}); // Clear field errors on completion
@@ -220,25 +194,39 @@ export default function AddEmployee() {
                 </div>
               </div>
 
-              {/* Email Field */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="john.doe@company.com"
-                  className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:ring-2 outline-none transition-all ${fieldErrors.email
-                    ? 'border-red-400 focus:ring-red-300 bg-red-50'
-                    : 'border-slate-200 focus:ring-blue-500'
-                    }`}
-                  disabled={isLoading}
-                  required
-                />
-                {fieldErrors.email && (
-                  <p className="text-red-500 text-xs mt-1 font-medium">{fieldErrors.email}</p>
-                )}
+              {/* Email and Phone Fields */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="john.doe@company.com"
+                    className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:ring-2 outline-none transition-all ${fieldErrors.email
+                      ? 'border-red-400 focus:ring-red-300 bg-red-50'
+                      : 'border-slate-200 focus:ring-blue-500'
+                      }`}
+                    disabled={isLoading}
+                    required
+                  />
+                  {fieldErrors.email && (
+                    <p className="text-red-500 text-xs mt-1 font-medium">{fieldErrors.email}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Phone Number</label>
+                  <input
+                    type="tel"
+                    name="phoneNumber"
+                    value={formData.phoneNumber}
+                    onChange={handleChange}
+                    placeholder="+1 (555) 123-4567"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    disabled={isLoading}
+                  />
+                </div>
               </div>
 
               {/* Department & Position */}
@@ -310,68 +298,7 @@ export default function AddEmployee() {
                 </select>
               </div>
 
-              {/* Password Fields */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Password</label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      name="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      placeholder="Create a strong password"
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all pr-10"
-                      disabled={isLoading}
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-700"
-                    >
-                      {showPassword ? <FaEyeSlash /> : <FaEye />}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Confirm Password</label>
-                  <div className="relative">
-                    <input
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      name="confirmPassword"
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                      placeholder="Re-enter your password"
-                      className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:ring-2 outline-none transition-all pr-10 ${formData.confirmPassword && formData.confirmPassword !== formData.password
-                        ? 'border-red-400 focus:ring-red-300 bg-red-50'
-                        : 'border-slate-200 focus:ring-blue-500'
-                        }`}
-                      disabled={isLoading}
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-700"
-                    >
-                      {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-                    </button>
-                  </div>
-                  {formData.confirmPassword && formData.confirmPassword !== formData.password && (
-                    <p className="text-red-500 text-xs mt-1 font-medium">Passwords do not match</p>
-                  )}
-                </div>
-              </div>
 
-              {/* Password Requirements */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-900 font-medium mb-2">Password Requirements:</p>
-                <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                  <li>Minimum 8 characters</li>
-                  <li>Passwords must match</li>
-                </ul>
-              </div>
 
               {/* Buttons */}
               <div className="flex gap-3 pt-4">

@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import SideBar from './SideBar';
 import { useAuth } from '../hooks/authhook';
 import { useAlert } from '../hooks/alerthook';
-import { setAlertHandler, getLeaveHistory } from '../services/ApiClient';
+import { setAlertHandler, getMyLeaves } from '../services/ApiClient';
 import { GiHamburgerMenu } from 'react-icons/gi';
 
 /**
@@ -28,8 +28,8 @@ export default function ProtectedLayout({ children, title, subtitle, action }) {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const data = await getLeaveHistory();
-        const leaveData = Array.isArray(data) ? data : data.results || [];
+        const data = await getMyLeaves();
+        const leaveData = data.data.results
         
         // Filter approved leaves and calculate remaining days
         const approvedLeaves = leaveData.filter(leave => 

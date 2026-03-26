@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getStatistics, getAllEmployees, listLeaves } from '../services/ApiClient';
+import { getStatistics, getEmployees, listLeaves } from '../services/ApiClient';
 import ProtectedLayout from '../components/ProtectedLayout';
 
 export default function AdminReports() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [reportType, setReportType] = useState('summary');
+  const [reportType, setReportType] = useState('applications');
   const [isLoading, setIsLoading] = useState(true);
   const [statistics, setStatistics] = useState(null);
   const [employees, setEmployees] = useState([]);
@@ -56,7 +56,7 @@ export default function AdminReports() {
 
   const fetchEmployeesData = async () => {
     try {
-      const data = await getAllEmployees();
+      const data = await getEmployees();
       setEmployees(Array.isArray(data) ? data : data.results || []);
     } catch (error) {
       console.error('Error fetching employees:', error);
@@ -120,9 +120,31 @@ export default function AdminReports() {
   if (!statistics) {
     return (
       <ProtectedLayout currentPath={location.pathname}>
-        <div className="min-h-screen bg-slate-50 p-8">
-          <div className="text-center">
-            <p className="text-slate-600">No data available</p>
+        <div className="min-h-screen bg-slate-50 p-8 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-12 max-w-md w-full text-center">
+            <svg
+              className="w-20 h-20 text-slate-300 mx-auto mb-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">No Data Available</h3>
+            <p className="text-slate-600 mb-6">
+              There is no reporting data available at this moment. Try refreshing the page or check back later.
+            </p>
+            <button
+              onClick={handleRefresh}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
+            >
+              Refresh Data
+            </button>
           </div>
         </div>
       </ProtectedLayout>
@@ -134,122 +156,121 @@ export default function AdminReports() {
       <div className="min-h-screen bg-slate-50 p-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
+          <div className="mb-10">
             <button
               onClick={() => navigate('/admin/dashboard')}
-              className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-4 transition-colors"
+              className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-semibold mb-6 transition-colors text-sm"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
               </svg>
               Back to Dashboard
             </button>
-            <h1 className="text-4xl font-black text-slate-900 mb-2">Leave Reports</h1>
-            <p className="text-slate-600">View and analyze leave management statistics</p>
+            <h1 className="text-5xl font-black text-slate-900 mb-3">Leave Applications</h1>
+            <p className="text-slate-600 text-lg">
+              Review and manage pending leave applications awaiting approval
+            </p>
           </div>
 
-          {/* Controls */}
-          <div className="mb-8 flex gap-4 flex-wrap">
-            <select
-              value={reportType}
-              onChange={(e) => setReportType(e.target.value)}
-              className="px-4 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-            >
-              <option value="summary">Summary Report</option>
-              <option value="applications">Leave Applications</option>
-              <option value="employees">All Employees</option>
-              <option value="department">Department Statistics</option>
-              <option value="monthly">Monthly Statistics</option>
-              <option value="leaveType">Leave Type Statistics</option>
-            </select>
+          {/* Controls - Hidden for now, shows when needed */}
+          {reportType !== 'applications' && (
+            <div className="mb-8 flex gap-3 flex-wrap items-center">
+              <select
+                value={reportType}
+                onChange={(e) => setReportType(e.target.value)}
+                className="px-4 py-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              >
+                <option value="summary">Summary Report</option>
+                <option value="applications">Leave Applications</option>
+                <option value="employees">All Employees</option>
+                <option value="department">Department Statistics</option>
+                <option value="monthly">Monthly Statistics</option>
+                <option value="leaveType">Leave Type Statistics</option>
+              </select>
 
-            <button
-              onClick={downloadPDF}
-              className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition"
-            >
-              📄 Export PDF
-            </button>
-            <button
-              onClick={downloadExcel}
-              className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition"
-            >
-              📊 Export Excel
-            </button>
-            <button
-              onClick={handleRefresh}
-              className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition"
-            >
-              🔄 Refresh
-            </button>
-          </div>
+              <button
+                onClick={handleRefresh}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
+              >
+                Refresh
+              </button>
+              <button
+                onClick={downloadPDF}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors"
+              >
+                Export PDF
+              </button>
+              <button
+                onClick={downloadExcel}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors"
+              >
+                Export Excel
+              </button>
+            </div>
+          )}
 
-          {/* Summary Report */}
+          {/* Summary Report - Hidden by default */}
           {reportType === 'summary' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
-                  <p className="text-slate-600 text-sm">Total Applications</p>
-                  <p className="text-4xl font-black text-slate-900 mt-2">{statistics.totalApplications}</p>
-                </div>
-                <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
-                  <p className="text-slate-600 text-sm">Approved</p>
-                  <p className="text-4xl font-black text-green-600 mt-2">{statistics.approvedApplications}</p>
-                </div>
-                <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
-                  <p className="text-slate-600 text-sm">Rejected</p>
-                  <p className="text-4xl font-black text-red-600 mt-2">{statistics.rejectedApplications}</p>
-                </div>
-                <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
-                  <p className="text-slate-600 text-sm">Pending</p>
-                  <p className="text-4xl font-black text-yellow-600 mt-2">{statistics.pendingApplications}</p>
-                </div>
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+              {/* Summary Bar */}
+              <div className="bg-blue-50 border-b border-slate-200 p-6">
+                <h2 className="text-2xl font-bold text-slate-900">Leave Statistics Summary</h2>
+                <p className="text-slate-600 mt-1">Overview of all leave applications and statistics</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
-                  <p className="text-slate-600 text-sm mb-4">Approval Rate</p>
-                  <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-blue-500 rounded-full transition-all"
-                      style={{
-                        width:
-                          statistics.totalApplications > 0
-                            ? `${(statistics.approvedApplications / statistics.totalApplications) * 100}%`
-                            : '0%',
-                      }}
-                    ></div>
+              {/* Content */}
+              <div className="p-6 space-y-6">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                    <p className="text-slate-600 text-xs font-semibold uppercase tracking-wide">Total Applications</p>
+                    <p className="text-3xl font-black text-slate-900 mt-2">{statistics.totalApplications}</p>
                   </div>
-                  <p className="text-sm text-slate-600 mt-2">
-                    {statistics.totalApplications > 0
-                      ? ((statistics.approvedApplications / statistics.totalApplications) * 100).toFixed(1)
-                      : '0'}
-                    % approved
-                  </p>
+                  <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                    <p className="text-green-700 text-xs font-semibold uppercase tracking-wide">Approved</p>
+                    <p className="text-3xl font-black text-green-600 mt-2">{statistics.approvedApplications}</p>
+                  </div>
+                  <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                    <p className="text-red-700 text-xs font-semibold uppercase tracking-wide">Rejected</p>
+                    <p className="text-3xl font-black text-red-600 mt-2">{statistics.rejectedApplications}</p>
+                  </div>
+                  <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                    <p className="text-yellow-700 text-xs font-semibold uppercase tracking-wide">Pending</p>
+                    <p className="text-3xl font-black text-yellow-600 mt-2">{statistics.pendingApplications}</p>
+                  </div>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
-                  <p className="text-slate-600 text-sm mb-2">Quick Stats</p>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Total Employees:</span>
-                      <span className="font-semibold">{statistics.totalEmployees}</span>
+                {/* Quick Stats */}
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <h3 className="text-sm font-bold text-slate-900 mb-3">Quick Overview</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-slate-600 text-xs">Total Employees</p>
+                      <p className="text-2xl font-black text-slate-900 mt-1">{statistics.totalEmployees}</p>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Avg Days/Employee:</span>
-                      <span className="font-semibold">{statistics.avgLeaveDaysPerEmployee}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Most Used:</span>
-                      <span className="font-semibold">{statistics.mostUsedLeaveType}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Rejection Rate:</span>
-                      <span className="font-semibold">
+                    <div>
+                      <p className="text-slate-600 text-xs">Approval Rate</p>
+                      <p className="text-2xl font-black text-blue-600 mt-1">
                         {statistics.totalApplications > 0
-                          ? ((statistics.rejectedApplications / statistics.totalApplications) * 100).toFixed(1)
-                          : '0'}
-                        %
-                      </span>
+                          ? ((statistics.approvedApplications / statistics.totalApplications) * 100).toFixed(0)
+                          : '0'}%
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-slate-600 text-xs">Rejection Rate</p>
+                      <p className="text-2xl font-black text-red-600 mt-1">
+                        {statistics.totalApplications > 0
+                          ? ((statistics.rejectedApplications / statistics.totalApplications) * 100).toFixed(0)
+                          : '0'}%
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-slate-600 text-xs">Pending Rate</p>
+                      <p className="text-2xl font-black text-yellow-600 mt-1">
+                        {statistics.totalApplications > 0
+                          ? ((statistics.pendingApplications / statistics.totalApplications) * 100).toFixed(0)
+                          : '0'}%
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -261,26 +282,21 @@ export default function AdminReports() {
           {reportType === 'applications' && (
             <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
               {/* Header */}
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-b border-slate-200 p-6">
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">Leave Applications</h2>
-                <p className="text-slate-600">
-                  Complete list of all employee leave applications with their status
-                </p>
+              <div className="bg-blue-50 border-b border-slate-200 p-6">
+                <h2 className="text-2xl font-bold text-slate-900">Leave Applications</h2>
+                <p className="text-slate-600 mt-1">Complete list of all employee leave applications</p>
               </div>
 
-              {/* Status Filter Pills */}
-              <div className="border-b border-slate-200 p-4 flex gap-2 flex-wrap">
-                <div className="px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
-                  ✓ Approved: {leaveApplications.filter(l => l.status === 'approved' || l.status === 'Approved').length}
+              {/* Status Summary */}
+              <div className="border-b border-slate-200 p-4 bg-slate-50 flex gap-3 flex-wrap">
+                <div className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold">
+                  ✓ Approved: {leaveApplications.filter(l => (l.status || '').toLowerCase() === 'approved').length}
                 </div>
-                <div className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold">
-                  ⏳ Pending: {leaveApplications.filter(l => l.status === 'pending' || l.status === 'Pending').length}
+                <div className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-bold">
+                  ⏳ Pending: {leaveApplications.filter(l => (l.status || '').toLowerCase() === 'pending').length}
                 </div>
-                <div className="px-4 py-2 bg-red-100 text-red-800 rounded-full text-sm font-semibold">
-                  ✕ Rejected: {leaveApplications.filter(l => l.status === 'rejected' || l.status === 'Rejected').length}
-                </div>
-                <div className="px-4 py-2 bg-slate-100 text-slate-800 rounded-full text-sm font-semibold">
-                  📋 Total: {leaveApplications.length}
+                <div className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold">
+                  ✕ Rejected: {leaveApplications.filter(l => (l.status || '').toLowerCase() === 'rejected').length}
                 </div>
               </div>
 
@@ -289,13 +305,11 @@ export default function AdminReports() {
                 <table className="w-full">
                   <thead>
                     <tr className="bg-slate-100 border-b border-slate-200">
-                      <th className="px-4 sm:px-6 py-4 text-left text-xs font-bold text-slate-900">Employee Name</th>
-                      <th className="px-4 sm:px-6 py-4 text-left text-xs font-bold text-slate-900">Email</th>
-                      <th className="hidden md:table-cell px-4 sm:px-6 py-4 text-left text-xs font-bold text-slate-900">Leave Type</th>
-                      <th className="hidden sm:table-cell px-4 sm:px-6 py-4 text-left text-xs font-bold text-slate-900">Start Date</th>
-                      <th className="hidden lg:table-cell px-4 sm:px-6 py-4 text-left text-xs font-bold text-slate-900">End Date</th>
-                      <th className="px-4 sm:px-6 py-4 text-left text-xs font-bold text-slate-900">Status</th>
-                      <th className="hidden md:table-cell px-4 sm:px-6 py-4 text-left text-xs font-bold text-slate-900">Submitted</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-900">Employee</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-900">Leave Type</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-900">Start Date</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-900">End Date</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-900">Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -316,41 +330,54 @@ export default function AdminReports() {
 
                         return (
                           <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50 transition">
-                            <td className="px-4 sm:px-6 py-4 text-sm font-semibold text-slate-900">
+                            <td className="px-6 py-4 text-sm text-slate-900 font-semibold">
                               {app.employee?.first_name} {app.employee?.last_name || 'N/A'}
                             </td>
-                            <td className="px-4 sm:px-6 py-4 text-sm text-slate-600 truncate">
-                              {app.employee?.email || 'N/A'}
-                            </td>
-                            <td className="hidden md:table-cell px-4 sm:px-6 py-4 text-sm text-slate-600">
+                            <td className="px-6 py-4 text-sm text-slate-600">
                               {app.leave_type?.name || app.leave_type || 'N/A'}
                             </td>
-                            <td className="hidden sm:table-cell px-4 sm:px-6 py-4 text-sm text-slate-600">
+                            <td className="px-6 py-4 text-sm text-slate-600">
                               {app.start_date ? new Date(app.start_date).toLocaleDateString() : 'N/A'}
                             </td>
-                            <td className="hidden lg:table-cell px-4 sm:px-6 py-4 text-sm text-slate-600">
+                            <td className="px-6 py-4 text-sm text-slate-600">
                               {app.end_date ? new Date(app.end_date).toLocaleDateString() : 'N/A'}
                             </td>
-                            <td className="px-4 sm:px-6 py-4">
-                              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${statusColor}`}>
+                            <td className="px-6 py-4">
+                              <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${statusColor}`}>
                                 {statusIcon} {status.charAt(0).toUpperCase() + status.slice(1)}
                               </span>
-                            </td>
-                            <td className="hidden md:table-cell px-4 sm:px-6 py-4 text-sm text-slate-600">
-                              {app.created_at ? new Date(app.created_at).toLocaleDateString() : 'N/A'}
                             </td>
                           </tr>
                         );
                       })
-                    ) : (
-                      <tr>
-                        <td colSpan="7" className="px-4 sm:px-6 py-8 text-center text-slate-500">
-                          No leave applications found
-                        </td>
-                      </tr>
-                    )}
+                    ) : null}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {/* Empty State for Leave Applications */}
+          {reportType === 'applications' && leaveApplications.length === 0 && (
+            <div className="flex items-center justify-center min-h-96">
+              <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-16 max-w-md w-full text-center">
+                <svg
+                  className="w-20 h-20 text-slate-300 mx-auto mb-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <h3 className="text-2xl font-bold text-slate-900 mb-3">No Pending Applications</h3>
+                <p className="text-slate-600 text-base leading-relaxed">
+                  All leave applications have been processed!
+                </p>
               </div>
             </div>
           )}
@@ -358,53 +385,74 @@ export default function AdminReports() {
           {/* All Employees */}
           {reportType === 'employees' && (
             <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
-              {/* Summary Card */}
-              <div className="bg-blue-50 border-b border-slate-200 p-4">
-                <p className="text-blue-900 font-semibold">
-                  All Employees in the System ({employees.length})
+              {/* Header */}
+              <div className="bg-blue-50 border-b border-slate-200 p-6">
+                <h2 className="text-2xl font-bold text-slate-900">All Employees</h2>
+                <p className="text-slate-600 mt-1">{employees.length} employees in the system</p>
+              </div>
+
+              {/* Summary */}
+              <div className="bg-slate-50 border-b border-slate-200 p-4">
+                <p className="text-slate-700 font-semibold text-sm">
+                  Total: {employees.length} employee{employees.length !== 1 ? 's' : ''}
                 </p>
               </div>
+
+              {/* Table */}
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="bg-slate-100 border-b border-slate-200">
-                      <th className="px-4 sm:px-6 py-4 text-left text-xs font-bold text-slate-900">Name</th>
-                      <th className="px-4 sm:px-6 py-4 text-left text-xs font-bold text-slate-900">Email</th>
-                      <th className="hidden md:table-cell px-4 sm:px-6 py-4 text-left text-xs font-bold text-slate-900">Department</th>
-                      <th className="hidden lg:table-cell px-4 sm:px-6 py-4 text-left text-xs font-bold text-slate-900">Position</th>
-                      <th className="hidden sm:table-cell px-4 sm:px-6 py-4 text-left text-xs font-bold text-slate-900">Date Added</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-900">Name</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-900">Email</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-900">Department</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-900">Position</th>
                     </tr>
                   </thead>
                   <tbody>
                     {employees.length > 0 ? (
                       employees.map((emp, idx) => (
                         <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50 transition">
-                          <td className="px-4 sm:px-6 py-4 text-sm font-semibold text-slate-900">
+                          <td className="px-6 py-4 text-sm font-semibold text-slate-900">
                             {emp.first_name} {emp.last_name}
                           </td>
-                          <td className="px-4 sm:px-6 py-4 text-sm text-slate-600 truncate">
+                          <td className="px-6 py-4 text-sm text-slate-600">
                             {emp.email}
                           </td>
-                          <td className="hidden md:table-cell px-4 sm:px-6 py-4 text-sm text-slate-600">
+                          <td className="px-6 py-4 text-sm text-slate-600">
                             {emp.department || 'N/A'}
                           </td>
-                          <td className="hidden lg:table-cell px-4 sm:px-6 py-4 text-sm text-slate-600">
+                          <td className="px-6 py-4 text-sm text-slate-600">
                             {emp.position || 'N/A'}
-                          </td>
-                          <td className="hidden sm:table-cell px-4 sm:px-6 py-4 text-sm text-slate-600">
-                            {emp.date_added ? new Date(emp.date_added).toLocaleDateString() : 'N/A'}
                           </td>
                         </tr>
                       ))
-                    ) : (
-                      <tr>
-                        <td colSpan="5" className="px-4 sm:px-6 py-8 text-center text-slate-500">
-                          No employees found
-                        </td>
-                      </tr>
-                    )}
+                    ) : null}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {/* Empty State for Employees */}
+          {reportType === 'employees' && employees.length === 0 && (
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-12 m-6">
+              <div className="text-center">
+                <svg
+                  className="w-16 h-16 text-slate-300 mx-auto mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zM6 20a9 9 0 0118 0v-2a9 9 0 00-18 0v2z"
+                  />
+                </svg>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">No Employees Found</h3>
+                <p className="text-slate-600">No employees are currently in the system</p>
               </div>
             </div>
           )}
@@ -412,45 +460,63 @@ export default function AdminReports() {
           {/* Department Statistics */}
           {reportType === 'department' && (
             <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
-              {/* Summary Card */}
-              <div className="bg-blue-50 border-b border-slate-200 p-4">
-                <p className="text-blue-900 font-semibold">
-                  Department breakdown of leave statistics
-                </p>
+              {/* Header */}
+              <div className="bg-blue-50 border-b border-slate-200 p-6">
+                <h2 className="text-2xl font-bold text-slate-900">Department Statistics</h2>
+                <p className="text-slate-600 mt-1">Leave statistics broken down by department</p>
               </div>
+
+              {/* Table */}
               <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-slate-100 border-b border-slate-200">
-                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Department</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Employees</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Approved Leave</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Pending Applications</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {statistics.departmentStats.length > 0 ? (
-                    statistics.departmentStats.map((dept, idx) => (
-                      <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
-                        <td className="px-6 py-4 font-semibold text-slate-900">{dept.department}</td>
-                        <td className="px-6 py-4 text-slate-600">{dept.employees}</td>
-                        <td className="px-6 py-4 text-slate-600">{dept.approvedLeave}</td>
-                        <td className="px-6 py-4">
-                          <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-bold">
-                            {dept.pendingLeave}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="4" className="px-6 py-4 text-center text-slate-500">
-                        No department data available
-                      </td>
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-slate-100 border-b border-slate-200">
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-900">Department</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-900">Employees</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-900">Approved Leave</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-900">Pending</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {statistics.departmentStats.length > 0 ? (
+                      statistics.departmentStats.map((dept, idx) => (
+                        <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50 transition">
+                          <td className="px-6 py-4 text-sm font-semibold text-slate-900">{dept.department}</td>
+                          <td className="px-6 py-4 text-sm text-slate-600">{dept.employees}</td>
+                          <td className="px-6 py-4 text-sm text-slate-600">{dept.approvedLeave || '0'}</td>
+                          <td className="px-6 py-4">
+                            <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-bold">
+                              {dept.pendingLeave || '0'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Empty State for Department Statistics */}
+          {reportType === 'department' && statistics.departmentStats.length === 0 && (
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-12 m-6">
+              <div className="text-center">
+                <svg
+                  className="w-16 h-16 text-slate-300 mx-auto mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  />
+                </svg>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">No Department Data</h3>
+                <p className="text-slate-600">No department statistics are available</p>
               </div>
             </div>
           )}
@@ -458,53 +524,71 @@ export default function AdminReports() {
           {/* Monthly Statistics */}
           {reportType === 'monthly' && (
             <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
-              {/* Summary Card */}
-              <div className="bg-blue-50 border-b border-slate-200 p-4">
-                <p className="text-blue-900 font-semibold">
-                  Monthly leave application trends
-                </p>
+              {/* Header */}
+              <div className="bg-blue-50 border-b border-slate-200 p-6">
+                <h2 className="text-2xl font-bold text-slate-900">Monthly Statistics</h2>
+                <p className="text-slate-600 mt-1">Leave application trends by month</p>
               </div>
+
+              {/* Table */}
               <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-slate-100 border-b border-slate-200">
-                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Month</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Approved</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Rejected</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Pending</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {statistics.monthlyStats.length > 0 ? (
-                    statistics.monthlyStats.map((month, idx) => (
-                      <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
-                        <td className="px-6 py-4 font-semibold text-slate-900">{month.month}</td>
-                        <td className="px-6 py-4">
-                          <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
-                            {month.approved}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm">
-                            {month.rejected}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm">
-                            {month.pending}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="4" className="px-6 py-4 text-center text-slate-500">
-                        No monthly data available
-                      </td>
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-slate-100 border-b border-slate-200">
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-900">Month</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-900">Approved</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-900">Rejected</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-900">Pending</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {statistics.monthlyStats.length > 0 ? (
+                      statistics.monthlyStats.map((month, idx) => (
+                        <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50 transition">
+                          <td className="px-6 py-4 text-sm font-semibold text-slate-900">{month.month}</td>
+                          <td className="px-6 py-4">
+                            <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold">
+                              {month.approved || '0'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold">
+                              {month.rejected || '0'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-bold">
+                              {month.pending || '0'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Empty State for Monthly Statistics */}
+          {reportType === 'monthly' && statistics.monthlyStats.length === 0 && (
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-12 m-6">
+              <div className="text-center">
+                <svg
+                  className="w-16 h-16 text-slate-300 mx-auto mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">No Monthly Statistics</h3>
+                <p className="text-slate-600">No monthly data is currently available</p>
               </div>
             </div>
           )}

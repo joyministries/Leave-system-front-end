@@ -35,10 +35,10 @@ export const ALL_MENU_ITEMS = [
     },
     {
         id: 'admin-employees',
-        label: 'Records',
+        label: 'Reports',
         path: '/admin/reports',
         allowedRoles: ['admin'],
-        description: 'Manage employee records'
+        description: 'View employee reports'
     },
     {
         id: 'admin-calendar',

@@ -14,14 +14,12 @@ export default function AdminBranches() {
   // create institution
   const createBranch = async (branchData) => {
     try {
-      console.log('Creating branch with data:', branchData);
       const response = await createInstitution(branchData);
-      console.log(response.data);
-      setBranches(prev => [...prev, response.data]);
-      showSuccess('Branch added successfully!');
+      return response.data;
     } catch (error) {
       console.error('Error creating branch:', error);
       showError('Failed to add branch. Please try again.');
+      throw error;
     }
   };
 
@@ -29,11 +27,11 @@ export default function AdminBranches() {
   const editBranch = async (branchId, branchData) => {
     try {
       const response = await updateInstitution(branchId, branchData);
-      setBranches(prev => prev.map(b => b.id === branchId ? response.data : b));
-      showSuccess('Branch updated successfully!');
+      return response.data;
     } catch (error) {
       console.error('Error updating branch:', error);
       showError('Failed to update branch. Please try again.');
+      throw error;
     }
   };
 
@@ -54,7 +52,6 @@ export default function AdminBranches() {
     const fetchBranches = async () => {
       try {
         const response = await getInstitutions();
-        console.log('API Response:', response.data);
         setBranches(response.data.results);
       }
       catch (error) {
@@ -108,7 +105,6 @@ export default function AdminBranches() {
   };
 
   const handleEditBranch = (branch) => {
-    editBranch(branch.id, formData);
     setIsEditing(true);
     setEditingId(branch.id);
     setFormData({
@@ -137,29 +133,23 @@ export default function AdminBranches() {
     try {
       if (isEditing) {
         // Update existing branch
-        setBranches(branches.map(b => 
-          b.id === editingId 
-            ? { ...b, ...formData }
-            : b
-        ));
+        const updatedBranch = await editBranch(editingId, formData);
+        setBranches(prev => prev.map(b => b.id === editingId ? updatedBranch : b));
         showSuccess('Branch updated successfully!');
       } else {
         // Add new branch
-          const newBranch = await createBranch(formData);
-        setBranches([...branches, newBranch]);
+        const newBranch = await createBranch(formData);
+        setBranches(prev => [...prev, newBranch]);
         showSuccess('Branch added successfully!');
       }
       setIsModalOpen(false);
       setFormData({ name: '' });
+      setIsEditing(false);
+      setEditingId(null);
+      setErrors({});
     } catch (error) {
       console.error('Error saving branch:', error);
       showError('Failed to save branch. Please try again.');
-    } finally {
-      setIsEditing(false);
-      setEditingId(null);
-      setFormData({ name: '' });
-      setErrors({});
-      setIsModalOpen(true);
     }
   };
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { getLeaveHistory } from '../services/ApiClient';
+import { getMyLeaves } from '../services/ApiClient';
 import ProtectedLayout from '../components/ProtectedLayout';
 
 export default function History() {
@@ -10,9 +10,9 @@ export default function History() {
   useEffect(() => {
     const fetchLeaves = async () => {
       try {
-        const data = await getLeaveHistory();
+        const data = await getMyLeaves();
         // Handle both array and paginated response formats
-        const leaveData = Array.isArray(data) ? data : data.results || [];
+        const leaveData = data.data.results
         setLeaves(leaveData);
       } catch (error) {
         console.error('Error fetching leave history:', error);
