@@ -63,7 +63,7 @@ export default function Dashboard() {
 
     return (
         <ProtectedLayout
-            title="Team Impact University"
+            title="Team Impact Christian University"
             subtitle={subtitleText}
             action={{ label: 'Apply Leave', onClick: handleApplyLeaveClick }}
             currentPath={location.pathname}
