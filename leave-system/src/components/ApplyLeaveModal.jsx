@@ -65,7 +65,6 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
   useEffect(() => {
     const fetchtypes = async () => {
       try {
-        setIsLoadingtypes(true);
         const data = await getLeaveTypes();
         const typesArray = Array.isArray(data) ? data : data.results || [];
         
