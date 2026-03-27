@@ -16,7 +16,11 @@ import SetPassword from "./pages/SetPassword.jsx";
 export default function App() {
   return (
     <Routes>
+<<<<<<< HEAD
+      <Route path="/" element={<Navigate to="/login" replace />} />
+=======
       <Route path="/" element={<Navigate to="/login" />} />
+>>>>>>> d7deb1db4698b052747cd17a5377a17226476053
       <Route path="/login" element={<Login />} />
       {/* Protected Employee Routes */}
       <Route path="/dashboard" element={<Dashboard />} />

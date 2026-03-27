@@ -162,7 +162,7 @@ export default function ProtectedLayout({ children, title, subtitle, action }) {
         onNavigate={(path) => navigate(path)}
         onLogout={handleLogout}
         currentPath={location.pathname}
-        branding="LeaveSystem"
+        branding="Team Impact Christian University"
       />
 
       {/* Main Content */}

@@ -9,7 +9,7 @@ export default function SideBar({
   onNavigate,
   onLogout,
   currentPath = '/dashboard',
-  branding = 'Leave System'
+  branding = 'Team Impact Christian University'
 }) {
   const { user } = useAuth();
 
