@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAlert } from '../hooks/alerthook';
-import { deactivateEmployee, getEmployees, updateEmployee } from '../services/ApiClient';
+import { deactivateEmployee, getEmployees, resendWelcomeEmail, updateEmployee } from '../services/ApiClient';
 import ProtectedLayout from '../components/ProtectedLayout';
 
 export default function AdminEmployeeManagement() {
@@ -130,13 +130,23 @@ export default function AdminEmployeeManagement() {
         const matchesSearch = 
             (emp.first_name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (emp.last_name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (emp.email?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (emp.employee_id?.toLowerCase().includes(searchTerm.toLowerCase()));
+            (emp.email?.toLowerCase().includes(searchTerm.toLowerCase()))
         
         const matchesRole = filterRole === 'all' || emp.role === filterRole;
         
         return matchesSearch && matchesRole;
     });
+
+    const handleResendWelcomeEmail = async (email) => {
+        try {
+            await resendWelcomeEmail(email);
+            showSuccess('Welcome email resent successfully!');
+        } catch (error) {
+            console.error('Error resending welcome email:', error);
+            showError('Failed to resend welcome email. Please try again.');
+        }
+    };
+
 
     // Get unique roles
     const uniqueRoles = [...new Set(employees.map(emp => emp.role).filter(Boolean))];
@@ -283,9 +293,6 @@ export default function AdminEmployeeManagement() {
                                                 <td className="px-6 py-4 text-sm text-slate-600">
                                                     {employee.email}
                                                 </td>
-                                                <td className="px-6 py-4 text-sm text-slate-600">
-                                                    {employee.employee_id}
-                                                </td>
                                                 <td className="px-6 py-4 text-sm">
                                                     <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                                                         employee.role === 'admin'
@@ -340,6 +347,13 @@ export default function AdminEmployeeManagement() {
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                             </svg>
                                                             Delete
+                                                        </button>
+                                                        <button
+                                                        onClick ={() => handleResendWelcomeEmail(employee.email)}
+                                                        className="px-3 py-2 bg-green-50 text-green-600 font-semibold rounded-lg hover:bg-green-100 transition-colors text-sm flex items-center gap-2"
+                                                        >
+                                                        Resend Email
+
                                                         </button>
                                                     </div>
                                                 </td>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import SideBar from './SideBar';
 import { useAuth } from '../hooks/authhook';
@@ -79,7 +79,7 @@ export default function ProtectedLayout({ children, title, subtitle, action }) {
   }, [showError]);
 
   // Close notification dropdown when route changes
-  useEffect(() => {
+  useLayoutEffect(() => {
     setIsNotificationOpen(false);
   }, [location.pathname]);
 

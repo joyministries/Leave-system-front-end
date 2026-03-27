@@ -78,6 +78,16 @@ export default function AddEmployee() {
       showWarning('Institution is required');
       return;
     }
+    // validation for phone number
+    if (!formData.phoneNumber.trim()) {
+      showWarning('Phone number is required');
+      return;
+    }
+
+    if (validatePhoneNumber(formData.phoneNumber)) {
+      showWarning('Please enter a valid phone number');
+      return;
+    }
 
     // Prepare data for API - using field names the backend expects
     const employeeData = {
@@ -339,4 +349,9 @@ export default function AddEmployee() {
       </div>
     </ProtectedLayout>
   );
+}
+
+const validatePhoneNumber = (phone) => {
+  const phoneRegex = /^\+?[1-9]\d{1,14}$/; // E.164 format
+  return !phoneRegex.test(phone);
 }

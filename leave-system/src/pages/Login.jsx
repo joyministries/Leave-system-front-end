@@ -47,8 +47,11 @@ export default function Login() {
 
         setIsLoading(false);
         // Redirect to the correct dashboard based on user role
-        navigate(getCorrectDashboardPath(userData));
-
+        if (userData.must_reset_password) {
+          navigate('/set-password');
+        } else {
+          navigate(getCorrectDashboardPath(userData));
+        }
       })
       .catch((error) => {
         const message = error?.message || 'An unexpected error occurred during login. Please try again later.';
@@ -70,7 +73,11 @@ export default function Login() {
 
         <div className="w-full p-6 sm:p-12 flex flex-col items-center justify-center bg-white">
           <div className="w-full">
+<<<<<<< HEAD
             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">Team Impact Christian University</h2>
+=======
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">Leave Management System</h2>
+>>>>>>> d7deb1db4698b052747cd17a5377a17226476053
             <p className="text-slate-500 mb-6 sm:mb-8 text-sm sm:text-base"> Please enter your credentials to proceed.</p>
 
             <form onSubmit={handleLogin} className="space-y-3 sm:space-y-4">
