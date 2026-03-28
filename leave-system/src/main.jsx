@@ -6,6 +6,7 @@ import { BrowserRouter } from "react-router-dom";
 import { AlertProvider } from "./context/AlertContext.jsx";
 import { AuthProvider } from './context/AuthContext.jsx';
 import { LoadingProvider } from './context/LoadingContext.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -13,7 +14,9 @@ createRoot(document.getElementById('root')).render(
       <AlertProvider>
         <AuthProvider>
           <LoadingProvider>
-            <App />
+            <ErrorBoundary>
+              <App />
+            </ErrorBoundary>
           </LoadingProvider>
         </AuthProvider>
       </AlertProvider>
