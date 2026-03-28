@@ -1,4 +1,6 @@
 import { checkUserRole } from './authorize';
+import { MdOutlineSpaceDashboard } from 'react-icons/md';
+
 
 // A single source of truth for all routes in the application
 export const ALL_MENU_ITEMS = [
@@ -8,7 +10,8 @@ export const ALL_MENU_ITEMS = [
         label: 'Dashboard',
         path: '/dashboard',
         allowedRoles: ['staff'],
-        description: 'View your dashboard and leave statistics'
+        description: 'View your dashboard and leave statistics',
+        navIcon: <MdOutlineSpaceDashboard/>
     },
     {
         id: 'my-requests',

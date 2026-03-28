@@ -2,14 +2,14 @@ import { IoClose } from 'react-icons/io5';
 import { useAuth } from '../hooks/authhook';
 import { getAuthorizedMenuItems } from '../utils/sidebarConfig';
 
-
 export default function SideBar({
   isMobileMenuOpen,
   setIsMobileMenuOpen,
   onNavigate,
   onLogout,
   currentPath = '/dashboard',
-  branding = 'Team Impact Christian University'
+  branding = 'Team Impact Christian University',
+  navIcon,
 }) {
   const { user } = useAuth();
 
@@ -46,8 +46,12 @@ export default function SideBar({
     <>
       {/* Desktop Sidebar */}
       <aside className="w-64 sm:w-64 w-72 bg-slate-900 text-white hidden md:flex flex-col">
+        {/* Icons */}
+        <div>
+          {/* Dashboard Icon */}
+          {navIcon}
         <div className="p-6 text-xl font-bold border-b border-slate-800 tracking-tight">{branding}</div>
-        
+        </div>
         <nav className="flex-1 p-4 space-y-2">
           {menuItems.length > 0 ? (
             menuItems.map(renderMenuItem)
