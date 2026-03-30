@@ -71,7 +71,7 @@ export const LeaveSummaryCard = ({ summary = [] }) => {
                     </thead>
                     <tbody>
                         {summaryData.map((item, index) => {
-                            const totalDays = item.total_days || item.total || 0;
+                            const totalDays = item.max_days || item.total || 0;
                             const usedDays = item.used_days || item.used || 0;
                             const remainingDays = item.remaining_days || item.remaining || (totalDays - usedDays);
                             const leaveType = item.leave_type_name || `Leave Type ${index + 1}`;
