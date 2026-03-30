@@ -91,10 +91,10 @@ export default function Dashboard() {
                     .filter(req => req.status?.toLowerCase() === 'approved')
                     .slice(0, 3) // Only show the next 3 upcoming leaves
                     .map(leave => (
-                <ApprovedLeaveCard key={leave.id} leave={leave} />
-                ))
-  }
-</div>
+                        <ApprovedLeaveCard key={leave.id} leave={leave} />
+                    ))
+                }
+            </div>
 
             {/* Leave Requests Table */}
             <div className="bg-white rounded-lg sm:rounded-2xl shadow-sm border border-slate-200 overflow-hidden">

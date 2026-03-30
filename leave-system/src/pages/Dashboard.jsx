@@ -2,9 +2,8 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/authhook';
 import { useAlert } from '../hooks/alerthook';
 import { useEffect, useState } from 'react';
-import { getMyLeaves } from '../services/ApiClient';
+import { getMyLeaves, getMyLeaveSummary, getLeaveTypes } from '../services/ApiClient';
 import { getUserDisplayName } from '../utils/userUtils';
-import { getMyLeaveSummary } from '../services/ApiClient';
 import ProtectedLayout from '../components/ProtectedLayout';
 import ApplyLeaveModal from '../components/ApplyLeaveModal';
 import ApprovedLeaveCard from '../components/LeaveStats';
@@ -35,23 +34,77 @@ export default function Dashboard() {
     const greetingText = `${getGreeting()}, ${getUserDisplayName(user)}!`;
     const subtitleText = 'Track your leave status and apply for new leaves';
 
+    // Calculate leave summary from leave types and approved leaves
+    const calculateLeaveSummary = (leaveTypes, approvedLeaves) => {
+        try {
+            const summaryMap = {};
+
+            // Initialize each leave type with maximum allocated days
+            if (Array.isArray(leaveTypes)) {
+                leaveTypes.forEach(type => {
+                    const maxDays = type.max_days || type.maximum_days || 0;
+                    summaryMap[type.id] = {
+                        leave_type_name: type.name || type.leave_type_name || 'Leave',
+                        total_days: maxDays,  // Maximum allocated days for this leave type
+                        used_days: 0,
+                        remaining_days: maxDays,
+                        is_active: true,
+                        status: 'active'
+                    };
+                });
+            }
+
+            // Count used days from approved leaves
+            if (Array.isArray(approvedLeaves)) {
+                approvedLeaves.forEach(leave => {
+                    if (leave.leave_type && summaryMap[leave.leave_type]) {
+                        // Calculate duration in days
+                        const start = new Date(leave.start_date);
+                        const end = new Date(leave.end_date);
+                        const duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+                        
+                        summaryMap[leave.leave_type].used_days += duration;
+                    }
+                });
+            }
+
+            // Calculate remaining days = Total - Used
+            Object.keys(summaryMap).forEach(key => {
+                const item = summaryMap[key];
+                item.remaining_days = Math.max(0, item.total_days - item.used_days);
+            });
+
+            console.log('Calculated summary with max days:', Object.values(summaryMap));
+            return Object.values(summaryMap);
+        } catch (error) {
+            console.error('Error calculating leave summary:', error);
+            return [];
+        }
+    };
+
     useEffect(() => {
         const loadDashboardData = async () => {
             setLoading(true);
 
             try{
-                const [leaveRes, summaryRes] = await Promise.all([
+                const [leaveRes, typesRes] = await Promise.all([
                     getMyLeaves(),
-                    getMyLeaveSummary()
+                    getLeaveTypes()
                 ]);
-                const leaveData = Array.isArray(leaveRes.data.results) ? leaveRes.data.results : leaveRes.data.results || {};
-                const summaryData = summaryRes.data || {};
-                setOngoingLeaves(leaveData.filter(leave => leave.status?.toLowerCase() === 'approved'));
-                setPendingLeaves(leaveData.filter(leave => leave.status?.toLowerCase() === 'pending'));
-                console.log('Ongoing Leaves Data:\n', ongoingLeaves);
-                console.log('Pending Leaves Data:\n', pendingLeaves);
-                setMyLeaveSummary(summaryData);
-                console.log('Leave Summary Data:\n', summaryData);
+                const leaveData = Array.isArray(leaveRes.data.results) ? leaveRes.data.results : leaveRes.data.results || [];
+                const typesData = Array.isArray(typesRes) ? typesRes : typesRes.data || [];
+                
+                const approvedLeaves = leaveData.filter(leave => leave.status?.toLowerCase() === 'approved');
+                const pendingLeaveList = leaveData.filter(leave => leave.status?.toLowerCase() === 'pending');
+                
+                setOngoingLeaves(approvedLeaves);
+                setPendingLeaves(pendingLeaveList);
+                
+                // Calculate summary from leave types and approved leaves
+                const calculatedSummary = calculateLeaveSummary(typesData, approvedLeaves);
+                setMyLeaveSummary(calculatedSummary);
+                
+                console.log('Calculated Leave Summary:', calculatedSummary);
                 showSuccess('Welcome to your dashboard!');
             } catch (error) {
                 showError('Failed to load dashboard data');
