@@ -17,7 +17,8 @@ export default function AdminManageLeaves() {
     const [formData, setFormData] = useState({
         name: '',
         max_days: '',
-        is_active: true
+        is_active: true,
+        allowed_month: ''
     });
 
     // Fetch leave types on component mount
@@ -53,7 +54,8 @@ export default function AdminManageLeaves() {
         setFormData({
             name: '',
             max_days: '',
-            is_active: true
+            is_active: true,
+            allowed_month: ''
         });
         setEditingId(null);
         setShowForm(false);
@@ -81,7 +83,7 @@ export default function AdminManageLeaves() {
                 await updateLeaveType(editingId, {
                     name: formData.name.trim(),
                     max_days: parseInt(formData.max_days),
-                    is_active: formData.is_active
+                    is_active: formData.is_active,
                 });
                 showSuccess('Leave type updated successfully!');
             } else {
@@ -94,6 +96,7 @@ export default function AdminManageLeaves() {
                 await createLeaveType({
                     name: formData.name.trim(),
                     max_days: parseInt(formData.max_days),
+                    allowed_month: formData.allowed_month ? parseInt(formData.allowed_month) : null,
                     is_active: formData.is_active
                 });
                 showSuccess('Leave type created successfully!');
@@ -224,6 +227,34 @@ export default function AdminManageLeaves() {
                                             className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                         />
                                     </div>
+
+                                    {/* Allowed Month */}
+                                    <div>
+                                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                            Allowed Month (Optional)
+                                        </label>
+                                        <select
+                                        name='allowed_month'
+                                        value={formData.allowed_month || ''}
+                                        onChange={handleInputChange}
+                                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                        >
+                                            <option value=""> Year-round (No restriction)</option>
+                                            <option value="1">January</option>
+                                            <option value="2">February</option>
+                                            <option value="3">March</option>
+                                            <option value="4">April</option>
+                                            <option value="5">May</option>
+                                            <option value="6">June</option>
+                                            <option value="7">July</option>
+                                            <option value="8">August</option>
+                                            <option value="9">September</option>
+                                            <option value="10">October</option>
+                                            <option value="11">November</option>
+                                            <option value="12">December</option>
+
+                                        </select>
+                                        </div>
 
                                     {/* Active Status Toggle */}
                                     <div>

@@ -579,17 +579,15 @@ export const toggleEmployeeActive = async (employeeId) => {
 };
 
 /**
- * Resend Welcome Email (HR/Admin Only)
- * POST /employees/<id>/resend_welcome_email/
- * Sends password reset link to employee
+ * Post /employees/:id/resend_invite
+ * Resend account activation email to employee (HR/Admin Only)
  */
-export const resendWelcomeEmail = async (employeeId) => {
+export const resendInviteEmail = async (employeeId) => {
   try {
-    const response = await apiClient.post(`/employees/${employeeId}/resend_welcome_email/`);
+    const response = await apiClient.post(`/employees/${employeeId}/resend_invite/`);
     return response;
-  } catch (error) {
-    const errorMsg = error.response?.data?.error || error.response?.data?.detail || error.message || 'Unknown error occurred';
-    const newError = new Error(`Failed to resend welcome email: ${errorMsg}`);
+  } catch (error) {    const errorMsg = error.response?.data?.error || error.response?.data?.detail || error.message || 'Unknown error occurred';
+    const newError = new Error(`Failed to resend invite email: ${errorMsg}`);
     newError.response = error.response;
     throw newError;
   }
@@ -748,3 +746,30 @@ export const getDepartmentReports = async () => {
     throw new Error('Failed to fetch department reports', { cause: error.message });
   }
 }
+
+/**
+ * Get /leaves/my-summary/ - Summary of current user's leave balances and usage
+ * Used at the employee dashboard to show leave balances and recent activity
+ */
+export const getMyLeaveSummary = async () => {
+  try {
+    const response = await apiClient.get('/leaves/my-summary/');
+    return response;
+  } catch (error) {
+    throw new Error('Failed to fetch leave summary', { cause: error.message });
+  }
+}
+
+/**
+ * Get /employees/:id/leave-summary
+ * Returns summary of leave balances and usage for a specific employee (HR/Admin Only)
+ */
+export const getEmployeeLeaveSummary = async (employeeId) => {
+  try {
+    const response = await apiClient.get(`/employees/${employeeId}/leave-summary/`);
+    return response;
+  } catch (error) {
+    throw new Error('Failed to fetch employee leave summary', { cause: error.message });
+  }
+}
+

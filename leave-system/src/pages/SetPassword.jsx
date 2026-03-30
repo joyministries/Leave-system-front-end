@@ -51,14 +51,32 @@ export default function SetPasswordPage() {
                 showError('Invalid route. Cannot reset password.');
             }
         } catch (err) {
+            
+            console.error("Password Reset Error:", err);
+            
             const errData = err.response?.data;
-            const specificError = 
-                errData?.new_password?.[0] ||
-                errData?.non_field_errors?.[0] ||
-                errData?.detail ||
-                errData.message ||
-                'Failed to set password. Please try again.';
-            showError(specificError);
+            let specificError = 'Failed to set password. Please try again.';
+
+            if (errData) {
+                if (typeof errData === 'string') {
+                    specificError = errData;
+                } else if (errData.detail) {
+                    specificError = errData.detail;
+                } else if (errData?.message) {
+                    specificError = errData.message;
+                } else if (typeof errData === 'object') {
+                    const firstKey = Object.keys(errData)[0];
+                    const firstError = errData[firstKey];
+                    const formattedError = Array.isArray(firstError) ? firstError[0] : firstError;
+                    
+                    // Clean up the key name for the UI (e.g., "new_password" -> "New Password")
+                    const cleanKey = firstKey.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    specificError = `${cleanKey}: ${formattedError}`;
+                }
+            } else if (err.message) {
+                specificError = err.message;
+            }
+     showError(specificError);
         } finally {
             setIsLoading(false);
         }
@@ -68,8 +86,11 @@ export default function SetPasswordPage() {
         <div style={{ maxWidth: '400px', margin: '50px auto', padding: '20px' }}>
             <div style={{ textAlign: 'center', marginBottom: '30px' }}>
                 <h1 style={{ color: '#1e293b', fontSize: '28px', marginBottom: '10px', fontWeight: '700' }}>
-                    Set Your Password
+                    Team Impact Christian University
                 </h1>
+                <h4 style={{ color: '#475569', fontSize: '16px', marginBottom: '5px' }}>
+                    {isFromEmailLink ? 'Welcome! Please set your password to get started.' : 'Your account requires a password reset.'}
+                </h4>
                 <p style={{ color: '#64748b', fontSize: '14px' }}>
                     {isFromEmailLink ? 'Create a secure password for your account' : 'You must set a password to continue'}
                 </p>

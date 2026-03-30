@@ -5,6 +5,7 @@ import { applyLeave, getLeaveTypes } from '../services/ApiClient';
 export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
   const [formData, setFormData] = useState({
     leaveTypeName: '',
+    allowedMonth: '',
     startDate: '',
     endDate: '',
     reason: '',
@@ -78,6 +79,7 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
             ...prev,
             leaveTypeId: initialPolicy.id,
             leaveTypeName: initialPolicy.name,
+            allowedMonth: initialPolicy.allowed_month,
           }));
         } else {
           throw new Error('API returned empty types list');
@@ -107,6 +109,7 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
           ...prev,
           leaveTypeId: selectedType.id,
           leaveTypeName: selectedType.name,
+          allowedMonth: selectedType.allowed_month,
         }));
         setSelectedTypeMaxDays(selectedType.max_days);
       }
@@ -174,6 +177,18 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
     if (requiresDocument(leaveTypeName) && !formData.document) {
       showWarning(`Please upload a ${getDocumentLabel(leaveTypeName).toLowerCase()} for ${leaveTypeName}`);
       return;
+    }
+
+   // Check dynamic allowed_month rule
+    if (formData.allowedMonth) {
+      const startMonth = new Date(formData.startDate).getMonth() + 1;
+      const endMonth = new Date(formData.endDate).getMonth() + 1;
+      
+      if (startMonth !== formData.allowedMonth || endMonth !== formData.allowedMonth) {
+        const monthName = new Date(2000, formData.allowedMonth - 1, 1).toLocaleString('default', { month: 'long' });
+        showError(`${formData.leaveTypeName} can only be taken strictly within the month of ${monthName}.`);
+        return;
+      }
     }
 
     try {
@@ -465,7 +480,7 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
 
               <button
                 type="submit"
-                disabled={exceedsLimit || isLoadingtypes || isSubmitting}
+                disabled={ isLoadingtypes || isSubmitting}
                 className="w-full bg-slate-900 hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg sm:rounded-xl transition-all shadow-lg text-sm sm:text-base min-h-[44px] flex items-center justify-center"
               >
                 {isSubmitting ? 'Submitting...' : 'Submit Request'}

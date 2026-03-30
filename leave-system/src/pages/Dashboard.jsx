@@ -4,16 +4,21 @@ import { useAlert } from '../hooks/alerthook';
 import { useEffect, useState } from 'react';
 import { getMyLeaves } from '../services/ApiClient';
 import { getUserDisplayName } from '../utils/userUtils';
+import { getMyLeaveSummary } from '../services/ApiClient';
 import ProtectedLayout from '../components/ProtectedLayout';
 import ApplyLeaveModal from '../components/ApplyLeaveModal';
 import ApprovedLeaveCard from '../components/LeaveStats';
+import { LeaveSummaryCard } from '../components/LeaveSummaryCard';
 
 export default function Dashboard() {
     const location = useLocation();
     const { user } = useAuth();
-    const { showError, showSuccess, showInfo } = useAlert();
-    const [leaveRequests, setLeaveRequests] = useState([]);
+    const { showError, showSuccess } = useAlert();
+    const [ongoingLeaves, setOngoingLeaves] = useState([]);
+    const [pendingLeaves, setPendingLeaves] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [myLeaveSummary, setMyLeaveSummary] = useState(null);
+    const [loading, setLoading] = useState(false);
 
     // Get greeting based on time
     const getGreeting = () => {
@@ -24,43 +29,39 @@ export default function Dashboard() {
         if (hour < 18) return 'Good Afternoon';
         return 'Good Evening';
     };
-
-    useEffect(() => {
-        const fetchLeaveRequests = async () => {
-            try {
-                const res = await getMyLeaves();
-                const data = res.data.results;
-                if (!data){
-                    showInfo('No leave requests found.');
-                    return;
-                }
-                // Handle both array and paginated response formats
-                const leaveData = Array.isArray(data) ? data : [];
-
-                // Filter out any undefined/null entries
-                const validLeaves = leaveData.filter(leave => leave && leave.id);
-
-                // Format leave types for display
-                const formattedLeaveData = validLeaves.map(leave => ({
-                    ...leave,
-                    leave_type: formatLeaveType(leave.leave_type || leave.type)
-                }));
-                setLeaveRequests(formattedLeaveData);
-            } catch (error) {
-                console.error('Error fetching leave requests:', error);
-                showError('Failed to fetch leave requests.');
-            }
-        };
-
-        fetchLeaveRequests();
-    }, [showInfo]);
-
     const handleApplyLeaveClick = () => {
         setIsModalOpen(true);
     };
-
     const greetingText = `${getGreeting()}, ${getUserDisplayName(user)}!`;
     const subtitleText = 'Track your leave status and apply for new leaves';
+
+    useEffect(() => {
+        const loadDashboardData = async () => {
+            setLoading(true);
+
+            try{
+                const [leaveRes, summaryRes] = await Promise.all([
+                    getMyLeaves(),
+                    getMyLeaveSummary()
+                ]);
+                const leaveData = Array.isArray(leaveRes.data.results) ? leaveRes.data.results : leaveRes.data.results || {};
+                const summaryData = summaryRes.data || {};
+                setOngoingLeaves(leaveData.filter(leave => leave.status?.toLowerCase() === 'approved'));
+                setPendingLeaves(leaveData.filter(leave => leave.status?.toLowerCase() === 'pending'));
+                console.log('Ongoing Leaves Data:\n', ongoingLeaves);
+                console.log('Pending Leaves Data:\n', pendingLeaves);
+                setMyLeaveSummary(summaryData);
+                console.log('Leave Summary Data:\n', summaryData);
+                showSuccess('Welcome to your dashboard!');
+            } catch (error) {
+                showError('Failed to load dashboard data');
+                console.error("Failed to fetch data: ", error)
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadDashboardData();
+    }, [showError, showSuccess]);
 
     return (
         <ProtectedLayout
@@ -75,67 +76,85 @@ export default function Dashboard() {
                 <p className="text-blue-100 mt-2 text-sm sm:text-base">{subtitleText}</p>
             </div>
 
-            {/* Leave Stats Grid */}
-            <div className="mb-6 sm:mb-8">
-                <h2 className="text-lg sm:text-2xl font-bold text-slate-900 mb-3 sm:mb-4">Your Current Leaves</h2>
-                <ApprovedLeaveCard leave={leaveRequests[0]} /> {/* Display the first approved leave */}
-            </div>
-
-            {/* Leave Requests Table */}
-            <div className="bg-white rounded-lg sm:rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-6 border-b border-slate-200">
-                    <h2 className="text-base sm:text-lg font-bold text-slate-900">Recent Requests</h2>
+            {loading ? (
+                <div className="text-center py-10">
+                    <p className="text-slate-500">Loading your dashboard...</p>
                 </div>
+            ) : (
+                <>
+                    {/* Show Summary of employee's leave balance */}
+                    <div className="mb-6 sm:mb-8">
+                        <h2 className="text-lg sm:text-2xl font-bold text-slate-900 mb-3 sm:mb-4">Leave Summary</h2>
+                        <LeaveSummaryCard summary={myLeaveSummary} />
+                    </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-slate-50">
-                            <tr>
-                                <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Type</th>
-                                <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Start Date</th>
-                                <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">End Date</th>
-                                <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
-                                <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Remarks</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {leaveRequests && leaveRequests.length > 0 ? (
-                                leaveRequests.slice(0, 5).map((request) => {
-                                    // Add safety check for request object
-                                    if (!request || !request.id) return null;
-                                    return (
-                                        <tr key={request.id} className="border-t border-slate-200 hover:bg-slate-50">
-                                            <td className="px-4 md:px-6 py-4 text-sm font-medium text-slate-900">
-                                                {formatLeaveType(request.leave_type || request.type)}
-                                            </td>
-                                            <td className="px-4 md:px-6 py-4 text-sm text-slate-600">
-                                                {request.start_date ? formatDate(request.start_date) : 'N/A'}
-                                            </td>
-                                            <td className="px-4 md:px-6 py-4 text-sm text-slate-600">
-                                                {request.end_date ? formatDate(request.end_date) : 'N/A'}
-                                            </td>
-                                            <td className="px-4 md:px-6 py-4 text-sm">
-                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(request.status || 'pending')}`}>
-                                                    {request.status || 'Pending'}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 md:px-6 py-4 text-sm text-slate-600 max-w-xs truncate">
-                                                {request.admin_remarks || '-'}
+                    {/* Leave Stats Grid */}
+                    <div className="mb-6 sm:mb-8">
+                        <h2 className="text-lg sm:text-2xl font-bold text-slate-900 mb-3 sm:mb-4">Your Current Leaves</h2>
+                        {ongoingLeaves && ongoingLeaves.length > 0 ? (
+                            <ApprovedLeaveCard leave={ongoingLeaves[0]} /> // Display the first approved leave
+                        ) : (
+                            <p className="text-slate-500">You have no current leaves.</p>
+                        )}
+                    </div>
+
+                    {/* Leave Requests Table */}
+                    <div className="bg-white rounded-lg sm:rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-6 border-b border-slate-200">
+                            <h2 className="text-base sm:text-lg font-bold text-slate-900">Recent Requests</h2>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-slate-50">
+                                    <tr>
+                                        <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Type</th>
+                                        <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Start Date</th>
+                                        <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">End Date</th>
+                                        <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
+                                        <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Remarks</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {pendingLeaves && pendingLeaves.length > 0 ? (
+                                        pendingLeaves.slice(0, 5).map((request) => {
+                                            // Add safety check for request object
+                                            if (!request || !request.id) return null;
+                                            return (
+                                                <tr key={request.id} className="border-t border-slate-200 hover:bg-slate-50">
+                                                    <td className="px-4 md:px-6 py-4 text-sm font-medium text-slate-900">
+                                                        {formatLeaveType(request.leave_type || request.type)}
+                                                    </td>
+                                                    <td className="px-4 md:px-6 py-4 text-sm text-slate-600">
+                                                        {request.start_date ? formatDate(request.start_date) : 'N/A'}
+                                                    </td>
+                                                    <td className="px-4 md:px-6 py-4 text-sm text-slate-600">
+                                                        {request.end_date ? formatDate(request.end_date) : 'N/A'}
+                                                    </td>
+                                                    <td className="px-4 md:px-6 py-4 text-sm">
+                                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(request.status || 'pending')}`}>
+                                                            {request.status || 'Pending'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 md:px-6 py-4 text-sm text-slate-600 max-w-xs truncate">
+                                                        {request.admin_remarks || '-'}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="5" className="px-4 md:px-6 py-8 text-center text-slate-500">
+                                                No leave requests found
                                             </td>
                                         </tr>
-                                    );
-                                })
-                            ) : (
-                                <tr>
-                                    <td colSpan="5" className="px-4 md:px-6 py-8 text-center text-slate-500">
-                                        No leave requests found
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </>
+            )}
 
             {/* Apply Leave Modal */}
             <ApplyLeaveModal
@@ -157,7 +176,8 @@ export default function Dashboard() {
                                 ...leave,
                                 leave_type: formatLeaveType(leave.leave_type || leave.type)
                             }));
-                            setLeaveRequests(formattedLeaveData);
+                            setOngoingLeaves(formattedLeaveData.filter(leave => leave.status?.toLowerCase() === 'approved'));
+                            setPendingLeaves(formattedLeaveData.filter(leave => leave.status?.toLowerCase() === 'pending'));
                         } catch (error) {
                             console.error('Error fetching leave requests:', error);
                             showError('Failed to refresh leave requests.');

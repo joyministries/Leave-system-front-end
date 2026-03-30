@@ -36,6 +36,7 @@ export default function AdminApplications() {
       setIsLoading(true);
       const res = await getPendingLeaves();
       const data = res.data;
+      console.log("Fetched pending applications data:\n", data);
       const leaveData = Array.isArray(data) ? data : data.results || [];
 
       const transformedData = leaveData.map((item) => {
@@ -51,6 +52,8 @@ export default function AdminApplications() {
           end: item.end_date || '',
           reason: item.reason || 'No reason provided',
           submittedDate: item.created_at ? new Date(item.created_at).toLocaleDateString() : 'N/A',
+          extra_unpaid_days: item.extra_unpaid_days || 0,
+          leave_duration: item.leave_duration || 0
         };
       });
 
@@ -67,17 +70,6 @@ export default function AdminApplications() {
     fetchPendingApplications();
   }, [fetchPendingApplications]);
 
-  const calculateDays = (startDate, endDate) => {
-    if (!startDate || !endDate) return 'N/A';
-    try {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-      return days > 0 ? `${days} day${days > 1 ? 's' : ''}` : '1 day';
-    } catch {
-      return 'N/A';
-    }
-  };
 
   // 2. Open Review Dialog
   const openReviewModal = (app, type) => {
@@ -172,7 +164,8 @@ export default function AdminApplications() {
                             <p className="text-[10px] text-slate-500 mt-1 truncate max-w-[150px]">"{app.reason}"</p>
                         </td>
                         <td className="px-6 py-4 text-sm font-bold text-blue-600">
-                            {calculateDays(app.start, app.end)}
+                            {app.leave_duration}
+                            <p className="text-[10px] mt-1 text-orange-500"> Unpaid Days : {app.extra_unpaid_days}</p>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex gap-2 justify-center">

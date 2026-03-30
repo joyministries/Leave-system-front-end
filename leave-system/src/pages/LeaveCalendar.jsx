@@ -11,7 +11,6 @@ export default function LeaveCalendar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  console.log('Current user:', user); // Debug log to check user data
   const { showError } = useAlert();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [leaveEvents, setLeaveEvents] = useState([]);
@@ -25,15 +24,10 @@ export default function LeaveCalendar() {
       try {
         setIsLoading(true);
         const res = isAdmin ? await listLeaves() : await getMyLeaves();
-        const rawData = res.data; // Unpack the Axios payload
-        console.log('Raw leave data:', rawData); // Debug log to inspect the data structure 
-
-
+        const rawData = res.data; 
         if (rawData) {
           // Handle both array and paginated response formats
           const leaveData = Array.isArray(rawData) ? rawData : rawData.results || [];
-
-          console.log('Parsed leave data:', leaveData);
           
           // Map events including the hydrated leave_type_name
           const events = leaveData
@@ -148,7 +142,7 @@ export default function LeaveCalendar() {
                   </svg>
                   Back to Dashboard
               </button>
-              <h1 className="text-4xl font-black text-slate-900 mb-2">{`${getUserDisplayName()}'s Leave Calendar`}</h1>
+              <h1 className="text-4xl font-black text-slate-900 mb-2">{`${getUserDisplayName(user)}'s Leave Calendar`}</h1>
               <p className="text-slate-600">View your approved and pending leave dates</p>
           </div>
 
@@ -161,7 +155,7 @@ export default function LeaveCalendar() {
           {/* User Info */}
           <div className="mb-6 pb-6 border-b border-slate-200">
             <p className="text-sm text-slate-600">
-              Viewing leave calendar for: <span className="font-semibold text-slate-900">{getUserDisplayName()}</span>
+              Viewing leave calendar for: <span className="font-semibold text-slate-900">{getUserDisplayName(user)}</span>
             </p>
             <p className="text-xs text-slate-500 mt-1">{getUserEmail(user)}</p>
           </div>
@@ -254,7 +248,7 @@ export default function LeaveCalendar() {
                       {event.type} - {safeStatus.charAt(0).toUpperCase() + safeStatus.slice(1)}
                     </div>
                     <div className="text-xs text-slate-600">
-                      {event.empName ? `Employee: ${event.empName}` : 'Employee information not available'}
+                      {event.empName ? `Employee: ${event.empName}` : `${getUserDisplayName(user)}`}
                     </div>
                     <div className="text-xs text-slate-600">
                       {formatDateRange(event.date, event.endDate)}

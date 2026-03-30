@@ -23,61 +23,83 @@ const getStatusColor = (status) => {
   return 'bg-slate-100 text-slate-800';
 };
 
-// Request Card Component
-
-const RequestCard = ({ request }) => {
+// Request Table Row Component
+const RequestTableRow = ({ request }) => {
   if (!request || !request.id) return null;
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 hover:shadow-md transition-all group">
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <h3 className="font-black text-slate-900 text-lg leading-tight">
-            {request.leave_type_name || request.leave_type || 'Leave Request'}
-          </h3>
-          <p className="text-slate-500 text-xs mt-1 font-medium">{request.institution_name}</p>
-        </div>
-        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${getStatusColor(request.status)}`}>
+    <tr className="border-t border-slate-200 hover:bg-slate-50 transition-colors">
+      <td className="px-4 py-3 text-sm font-semibold text-slate-900">
+        {request.leave_type_name || request.leave_type || 'Leave Request'}
+      </td>
+      <td className="px-4 py-3 text-sm text-slate-600">
+        {formatDate(request.start_date)}
+      </td>
+      <td className="px-4 py-3 text-sm text-slate-600">
+        {formatDate(request.end_date)}
+      </td>
+      <td className="px-4 py-3 text-sm text-slate-600">
+        <span className="bg-slate-100 px-2 py-1 rounded text-xs font-semibold">
+          {request.leave_duration || 'N/A'} days
+        </span>
+      </td>
+      <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">
+        {request.reason || 'No reason provided'}
+      </td>
+      <td className="px-4 py-3 text-sm">
+        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(request.status)}`}>
           {request.status || 'Pending'}
         </span>
-      </div>
-      
-      <div className="flex items-center gap-4 py-3 border-y border-slate-50 my-4">
-        <div className="flex-1">
-          <p className="text-[10px] text-slate-400 uppercase font-bold mb-1">From</p>
-          <p className="text-sm font-bold text-slate-700">{formatDate(request.start_date)}</p>
-        </div>
-        <div className="h-8 w-px bg-slate-100"></div>
-        <div className="flex-1">
-          <p className="text-[10px] text-slate-400 uppercase font-bold mb-1">To</p>
-          <p className="text-sm font-bold text-slate-700">{formatDate(request.end_date)}</p>
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-slate-400">Duration:</span>
-          <span className="text-xs font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
-            {request.leave_duration || 'N/A'} days
-          </span>
-        </div>
-        <p className="text-slate-600 text-sm line-clamp-2 italic">"{request.reason || 'No reason provided'}"</p>
-      </div>
-
-      <div className="mt-4 pt-4 border-t border-slate-50 flex justify-between items-center">
-        <p className="text-slate-400 text-[10px] font-medium">
-          Submitted {formatDate(request.created_at || new Date().toISOString())}
-        </p>
-        {request.supporting_document && (
+      </td>
+      <td className="px-4 py-3 text-sm">
+        {request.supporting_document ? (
           <a 
             href={request.supporting_document} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="text-blue-600 text-xs font-bold hover:underline"
+            className="text-blue-600 font-semibold hover:underline"
           >
-            View Document
+            View
           </a>
+        ) : (
+          <span className="text-slate-400">-</span>
         )}
+      </td>
+    </tr>
+  );
+};
+
+// Requests Table Component
+const RequestsTable = ({ requests }) => {
+  if (!requests || requests.length === 0) {
+    return (
+      <div className="bg-slate-50 rounded-xl p-8 text-center border border-dashed border-slate-300">
+        <p className="text-slate-500">No requests</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Leave Type</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">From</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">To</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Duration</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Reason</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Document</th>
+            </tr>
+          </thead>
+          <tbody>
+            {requests.map((request) => (
+              <RequestTableRow key={request.id} request={request} />
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -92,17 +114,7 @@ const StatusSection = ({ title, requests: sectionRequests, icon, bgColor }) => (
         {title} ({sectionRequests.length})
       </h3>
     </div>
-    <div className="space-y-4">
-      {sectionRequests.length > 0 ? (
-        sectionRequests.map((request) => (
-          <RequestCard key={request.id} request={request} />
-        ))
-      ) : (
-        <div className="bg-slate-50 rounded-xl p-6 text-center">
-          <p className="text-slate-500">No {title.toLowerCase()} requests</p>
-        </div>
-      )}
-    </div>
+    <RequestsTable requests={sectionRequests} />
   </div>
 );
 
@@ -111,9 +123,11 @@ export default function MyRequests() {
   const navigate = useNavigate();
   const [requests, setRequests] = useState([]);
   const { showError } = useAlert();
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchLeaveHistory = async () => {
+      setLoading(true);
       try {
         const res = await getMyLeaves();
         const leaveData = res.data;
@@ -129,6 +143,8 @@ export default function MyRequests() {
       } catch (error) {
         console.error('Error fetching leave requests:', error);
         showError('Failed to load leave requests.');
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -143,13 +159,6 @@ export default function MyRequests() {
   const pendingRequests = getRequestsByStatus('pending');
   const approvedRequests = getRequestsByStatus('approved');
   const rejectedRequests = getRequestsByStatus('rejected');
-
-  const pendingCategory = pendingRequests.reduce((acc, req) => {
-    const type = req.leave_type_name || req.leave_type || req.type || 'Other';
-    if (!acc[type]) acc[type] = [];
-    acc[type].push(req);
-    return acc;
-  }, {});
 
   return (
     <ProtectedLayout currentPath={location.pathname}>
@@ -170,8 +179,14 @@ export default function MyRequests() {
               <p className="text-slate-600">View all your submitted leave requests</p>
           </div>
 
-      {/** Pending requests */}
+          {loading ? (
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-12 text-center">
+              <p className="text-slate-500 text-lg">Loading your leave requests...</p>
+            </div>
+          ) : (
+      
       <div className="space-y-12">
+        {/** Pending requests */}
        <section className="mb-12">
           <div className="flex items-center gap-3 mb-6 p-4 rounded-xl bg-yellow-50 border border-yellow-200">
             <span className="text-2xl">⏳</span>
@@ -182,21 +197,8 @@ export default function MyRequests() {
             </div>
           </div>
 
-          {Object.keys(pendingCategory).length > 0 ? (
-            Object.entries(pendingCategory).map(([type, reqs]) => (
-              <div key={type} className="mb-8 last:mb-0">
-                <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 border-l-4 border-yellow-400 pl-3">
-                  {type}
-                </h4>
-                
-                {/* Changed to a grid layout so cards sit nicely side-by-side on larger screens */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {reqs.map((req) => (
-                    <RequestCard key={req.id} request={req} />
-                  ))}
-                </div>
-              </div>
-            ))
+          {pendingRequests.length > 0 ? (
+            <RequestsTable requests={pendingRequests} />
           ) : (
             <div className="bg-slate-50 rounded-2xl p-8 text-center border border-dashed border-slate-300">
               <p className="text-slate-500">No pending requests</p>
@@ -227,6 +229,7 @@ export default function MyRequests() {
           </div>
         )}
       </div>
+          )}
       </div>
      </div>
     </ProtectedLayout>

@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAlert } from '../hooks/alerthook';
-import { deactivateEmployee, getEmployees, resendWelcomeEmail, updateEmployee, toggleEmployeeActive } from '../services/ApiClient';
+import { deactivateEmployee, getEmployees, resendInviteEmail, updateEmployee, toggleEmployeeActive } from '../services/ApiClient';
 import ProtectedLayout from '../components/ProtectedLayout';
 
 export default function AdminEmployeeManagement() {
@@ -147,14 +147,14 @@ export default function AdminEmployeeManagement() {
         return matchesSearch && matchesRole;
     });
 
-    const handleResendWelcomeEmail = async (id) => {
+    const handleResendInviteEmail = async (id) => {
         try {
-            await resendWelcomeEmail(id);
-            showSuccess('Welcome email resent successfully!');
+            await resendInviteEmail(id);
+            showSuccess('Invite email resent successfully!');
         } catch (error) {
-            console.error('Error resending welcome email:', error);
+            console.error('Error resending invite email:', error);
             const detailMsg = error.response?.data?.error || error.response?.data?.detail || error.message;
-            showError(detailMsg ? `Failed: ${detailMsg.substring(0, 100)}` : 'Failed to resend welcome email. Please try again.');
+            showError(detailMsg ? `Failed: ${detailMsg.substring(0, 100)}` : 'Failed to resend invite email. Please try again.');
         }
     };
 
@@ -342,7 +342,7 @@ export default function AdminEmployeeManagement() {
                                                             Delete
                                                         </button>
                                                         <button
-                                                        onClick ={() => handleResendWelcomeEmail(employee.id)}
+                                                        onClick ={() => handleResendInviteEmail(employee.id)}
                                                         className="px-3 py-2 bg-green-50 text-green-600 font-semibold rounded-lg hover:bg-green-100 transition-colors text-sm flex items-center gap-2"
                                                         >
                                                         Resend Email

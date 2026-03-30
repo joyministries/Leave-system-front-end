@@ -29,6 +29,7 @@ export default function Login() {
     setIsLoading(true);
     login(email, password)
       .then((response) => {
+        console.log("Login response data after login\n:", response);
         const token = response.data.access;
         const userData = response.data.employee;
 
