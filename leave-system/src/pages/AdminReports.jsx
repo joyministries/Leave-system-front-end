@@ -228,7 +228,6 @@ const downloadPDFReport = () => {
             finalY = doc.lastAutoTable.finalY + 10;
           });
 
-          // 3. Save this institution's specific PDF
           const safeInstName = inst.replace(/\s+/g, '_');
           doc.save(`Leave_Report_${safeInstName}_${new Date().toISOString().slice(0,10)}.pdf`);
         });
@@ -309,7 +308,7 @@ const downloadPDFReport = () => {
                   onClick={() => downloadPDFReport()} 
                   className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold rounded-lg transition-colors shadow-sm flex items-center gap-2"
                 >
-                 {isExporting ? (
+                  {isExporting ? (
                     <>
                       <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -410,7 +409,7 @@ const downloadPDFReport = () => {
                         <div className="flex gap-2 mt-6 justify-center">
                           <button 
                               disabled={currentPage === 1}
-                              onClick={() => fetchIndividualLeaves(selectedEmployee.id, currentPage - 1)}
+                              onClick={() => fetchIndividualLeaves(selectedEmployee.employee, currentPage - 1)}
                               className="px-4 py-2 bg-white border border-slate-300 rounded text-sm font-bold disabled:opacity-50 hover:bg-slate-50"
                           >
                               Previous
@@ -418,7 +417,7 @@ const downloadPDFReport = () => {
                           <span className="px-4 py-2 text-sm font-bold text-slate-500">Page {currentPage}</span>
                           <button 
                               disabled={!hasNext}
-                              onClick={() => fetchIndividualLeaves(selectedEmployee.id, currentPage + 1)}
+                              onClick={() => fetchIndividualLeaves(selectedEmployee.employee, currentPage + 1)}
                               className="px-4 py-2 bg-white border border-slate-300 rounded text-sm font-bold disabled:opacity-50 hover:bg-slate-50"
                           >
                               Next
