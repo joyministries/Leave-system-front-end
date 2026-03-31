@@ -38,30 +38,53 @@ export default function Dashboard() {
     const calculateLeaveSummary = (leaveTypes, approvedLeaves) => {
         try {
             const summaryMap = {};
+            
+            // Get today's date and normalize to midnight for real-time burndown
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
 
             // Initialize each leave type with maximum allocated days
             if (Array.isArray(leaveTypes)) {
                 leaveTypes.forEach(type => {
-                    const maxDays = type.max_days || type.maximum_days || 0;
+                    const maxDays = type.max_days || 0;
                     summaryMap[type.id] = {
                         leave_type_name: type.name || type.leave_type_name || 'Leave',
                         max_days: maxDays,  // Maximum allocated days for this leave type
                         used_days: 0,
-                        remaining_days: maxDays,
+                        remaining_days: 0,
                         is_active: true,
                         status: 'active'
                     };
                 });
             }
 
-            // Count used days from approved leaves
+            // Count used days from approved leaves (Real-time burndown logic)
             if (Array.isArray(approvedLeaves)) {
                 approvedLeaves.forEach(leave => {
                     if (leave.leave_type && summaryMap[leave.leave_type]) {
-                        // Calculate duration in days
                         const start = new Date(leave.start_date);
                         const end = new Date(leave.end_date);
-                        const duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+                        
+                        // Normalize leave dates to midnight
+                        start.setHours(0, 0, 0, 0);
+                        end.setHours(0, 0, 0, 0);
+
+                        let current = new Date(start);
+                        let duration = 0;
+                        
+                        // Loop continues ONLY IF we haven't passed the leave's end date 
+                        // AND we haven't passed today's date
+                        while (current <= end && current <= today) {
+                            const dayOfWeek = current.getDay();
+                            
+                            // 0 is Sunday, 6 is Saturday. Only count weekdays.
+                            if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                                duration++;
+                            }
+                            
+                            // Move forward by 1 day
+                            current.setDate(current.getDate() + 1);
+                        }
                         
                         summaryMap[leave.leave_type].used_days += duration;
                     }

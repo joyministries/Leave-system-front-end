@@ -75,7 +75,8 @@ export const LeaveSummaryCard = ({ summary = [] }) => {
                             const usedDays = item.used_days || item.used || 0;
                             const remainingDays = item.remaining_days || item.remaining || (totalDays - usedDays);
                             const leaveType = item.leave_type_name || `Leave Type ${index + 1}`;
-                            const usagePercent = totalDays > 0 ? Math.round((usedDays / totalDays) * 100) : 0;
+
+                            const usagePercent = totalDays > 0 ? Math.min(Math.round((usedDays / totalDays) * 100), 100) : 0;
 
                             const style = getRowStyle(item);
 
