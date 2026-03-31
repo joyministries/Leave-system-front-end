@@ -71,7 +71,7 @@ export default function Dashboard() {
             // Calculate remaining days = Total - Used
             Object.keys(summaryMap).forEach(key => {
                 const item = summaryMap[key];
-                item.remaining_days = Math.max(0, item.total_days - item.used_days);
+                item.remaining_days = Math.max(0, item.max_days - item.used_days);
             });
 
             console.log('Calculated summary with max days:', Object.values(summaryMap));
