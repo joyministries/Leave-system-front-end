@@ -216,11 +216,16 @@ export default function Dashboard() {
                 onSubmitSuccess={() => {
                     setIsModalOpen(false);
                     showSuccess('Leave request submitted successfully!');
-                    // Refresh leave requests
+                    // Refresh leave requests and recalculate summary
                     const fetchLeaveRequests = async () => {
                         try {
-                            const data = await getMyLeaves();
-                            const leaveData = Array.isArray(data) ? data : data.results || [];
+                            const [leaveRes, typesRes] = await Promise.all([
+                                getMyLeaves(),
+                                getLeaveTypes()
+                            ]);
+                            const data = leaveRes.data.results || leaveRes.data || [];
+                            const leaveData = Array.isArray(data) ? data : [];
+                            const typesData = Array.isArray(typesRes) ? typesRes : typesRes.data || [];
 
                             // Filter out any undefined/null entries
                             const validLeaves = leaveData.filter(leave => leave && leave.id);
@@ -229,8 +234,15 @@ export default function Dashboard() {
                                 ...leave,
                                 leave_type: formatLeaveType(leave.leave_type || leave.type)
                             }));
-                            setOngoingLeaves(formattedLeaveData.filter(leave => leave.status?.toLowerCase() === 'approved'));
-                            setPendingLeaves(formattedLeaveData.filter(leave => leave.status?.toLowerCase() === 'pending'));
+                            const approvedLeaves = formattedLeaveData.filter(leave => leave.status?.toLowerCase() === 'approved');
+                            const pendingLeaveList = formattedLeaveData.filter(leave => leave.status?.toLowerCase() === 'pending');
+                            
+                            setOngoingLeaves(approvedLeaves);
+                            setPendingLeaves(pendingLeaveList);
+                            
+                            // Recalculate summary with updated leave data
+                            const updatedSummary = calculateLeaveSummary(typesData, approvedLeaves);
+                            setMyLeaveSummary(updatedSummary);
                         } catch (error) {
                             console.error('Error fetching leave requests:', error);
                             showError('Failed to refresh leave requests.');
