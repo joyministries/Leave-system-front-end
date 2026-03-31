@@ -45,7 +45,7 @@ export default function Dashboard() {
                     const maxDays = type.max_days || type.maximum_days || 0;
                     summaryMap[type.id] = {
                         leave_type_name: type.name || type.leave_type_name || 'Leave',
-                        total_days: maxDays,  // Maximum allocated days for this leave type
+                        max_days: maxDays,  // Maximum allocated days for this leave type
                         used_days: 0,
                         remaining_days: maxDays,
                         is_active: true,
