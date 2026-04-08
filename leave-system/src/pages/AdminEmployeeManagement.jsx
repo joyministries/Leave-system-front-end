@@ -17,13 +17,31 @@ export default function AdminEmployeeManagement() {
     const [editFormData, setEditFormData] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
+    const [pageSize, setPageSize] = useState(10);
+    const [totalPages, setTotalPages] = useState(0);
+    const [allEmployees, setAllEmployees] = useState([]);
+
     // Fetch employees on component mount
     const fetchEmployees = useCallback(async () => {
         try {
             setIsLoading(true);
-            const response = await getEmployees();
-            const data = response.data.results;
-            setEmployees(data);
+            const response = await getEmployees({ page });
+            const data = response.data;
+
+            if (data.results) {
+            setAllEmployees(data.results);
+            setTotalCount(data.count || 0);
+            setPageSize(data.results.length);
+            setTotalPages(Math.ceil(data.count || 0) / 10);
+            } else if (Array.isArray(data)) {
+                setAllEmployees(data);
+                setTotalCount(data.length);
+                setPageSize(data.length);
+                setTotalPages(1);
+                setCurrentPage(1);
+            }
         } catch (error) {
             console.error('Error fetching employees:', error);
             showError('Failed to load employees. Please try again.');
@@ -131,7 +149,7 @@ export default function AdminEmployeeManagement() {
     };
 
     // Filter and search employees
-    const filteredEmployees = employees.filter(emp => {
+    const filteredEmployees = allEmployees.filter(emp => {
         const matchesSearch = 
             (emp.first_name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (emp.last_name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -153,6 +171,13 @@ export default function AdminEmployeeManagement() {
             showError(detailMsg ? `Failed: ${detailMsg.substring(0, 100)}` : 'Failed to resend invite email. Please try again.');
         }
     };
+
+    const handlePageChange = (newPage) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            fetchEmployees(newPage);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
 
 
     // Get unique roles
@@ -267,11 +292,16 @@ export default function AdminEmployeeManagement() {
                     ) : (
                         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
                             {/* Summary */}
-                            <div className="bg-blue-50 border-b border-slate-200 p-4">
-                                <p className="text-blue-900 font-semibold">
-                                    Showing {filteredEmployees.length} employee{filteredEmployees.length !== 1 ? 's' : ''}
-                                </p>
-                            </div>
+                        <div className="bg-blue-50 border-b border-slate-200 p-4 flex justify-between items-center">
+                            <p className="text-blue-900 font-semibold">
+                                Showing {filteredEmployees.length} of {totalCount} employee{totalCount !== 1 ? 's' : ''}
+                            </p>
+                            {totalPages > 1 && (
+                                <span className="text-sm text-blue-700 font-medium">
+                                    Page {currentPage} of {totalPages}
+                                </span>
+                            )}
+                        </div>
 
                             {/* Table */}
                             <div className="overflow-x-auto">
@@ -350,6 +380,54 @@ export default function AdminEmployeeManagement() {
                                         ))}
                                     </tbody>
                                 </table>
+
+                                                            {/* Pagination Controls */}
+                            {totalPages > 1 && (
+                                <div className="bg-slate-50 border-t border-slate-200 p-4">
+                                    <div className="flex items-center justify-between gap-4">
+                                        <button
+                                            onClick={() => handlePageChange(currentPage - 1)}
+                                            disabled={currentPage === 1}
+                                            className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 font-semibold rounded-lg transition flex items-center gap-2"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                            </svg>
+                                            Previous
+                                        </button>
+
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-slate-600 text-sm">Go to page:</span>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max={totalPages}
+                                                value={currentPage}
+                                                onChange={(e) => {
+                                                    const page = parseInt(e.target.value);
+                                                    if (page >= 1 && page <= totalPages) {
+                                                        handlePageChange(page);
+                                                    }
+                                                }}
+                                                className="w-14 px-2 py-2 border border-slate-300 rounded-lg text-center font-semibold text-slate-900"
+                                            />
+                                            <span className="text-slate-600 text-sm">of {totalPages}</span>
+                                        </div>
+
+                                        <button
+                                            onClick={() => handlePageChange(currentPage + 1)}
+                                            disabled={currentPage === totalPages}
+                                            className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 font-semibold rounded-lg transition flex items-center gap-2"
+                                        >
+                                            Next
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
                             </div>
                         </div>
                     )}
