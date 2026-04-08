@@ -9,7 +9,6 @@ export default function AdminEmployeeManagement() {
     const location = useLocation();
     const navigate = useNavigate();
     const { showSuccess, showError } = useAlert();
-    const [employees, setEmployees] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterRole, setFilterRole] = useState('all');
@@ -17,28 +16,29 @@ export default function AdminEmployeeManagement() {
     const [editFormData, setEditFormData] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
-    const [pageSize, setPageSize] = useState(10);
     const [totalPages, setTotalPages] = useState(0);
     const [allEmployees, setAllEmployees] = useState([]);
 
-    // Fetch employees on component mount
-    const fetchEmployees = useCallback(async () => {
+    // Fetch employees with pagination
+    const fetchEmployees = useCallback(async (page = 1) => {
         try {
             setIsLoading(true);
             const response = await getEmployees({ page });
             const data = response.data;
 
             if (data.results) {
-            setAllEmployees(data.results);
-            setTotalCount(data.count || 0);
-            setPageSize(data.results.length);
-            setTotalPages(Math.ceil(data.count || 0) / 10);
+                // Paginated response
+                setAllEmployees(data.results);
+                setTotalCount(data.count || 0);
+                setTotalPages(Math.ceil((data.count || 0) / 10));
+                setCurrentPage(page);
             } else if (Array.isArray(data)) {
+                // Non-paginated response (fallback)
                 setAllEmployees(data);
                 setTotalCount(data.length);
-                setPageSize(data.length);
                 setTotalPages(1);
                 setCurrentPage(1);
             }
@@ -51,17 +51,16 @@ export default function AdminEmployeeManagement() {
     }, [showError]);
 
     useEffect(() => {
-        fetchEmployees();
+        fetchEmployees(1);
     }, [fetchEmployees]);
 
     const handleUpdate = async (employeeId, updatedData) => {
         try {
             await updateEmployee(employeeId, updatedData);
             showSuccess('Employee updated successfully!');
-            await fetchEmployees();
+            await fetchEmployees(currentPage);
             setEditingEmployee(null);
-        }
-        catch (error) {
+        } catch (error) {
             console.error('Error updating employee:', error);
             showError('Failed to update employee. Please try again.');
         }
@@ -76,7 +75,6 @@ export default function AdminEmployeeManagement() {
             email: employee.email,
             role: employee.role,
             department: employee.department || '',
-            password: employee.password || '',
         });
     };
 
@@ -124,7 +122,7 @@ export default function AdminEmployeeManagement() {
             try {
                 await deactivateEmployee(id);
                 showSuccess('Employee record has been deleted successfully!');
-                await fetchEmployees();
+                await fetchEmployees(currentPage);
             } catch (error) {
                 console.error('Error deactivating employee:', error);
                 showError('Failed to deactivate employee. Please try again.');
@@ -133,7 +131,7 @@ export default function AdminEmployeeManagement() {
     };
 
     const handleToggleActive = async (id) => {
-        const employeeToToggle = employees.find(emp => emp.id === id);
+        const employeeToToggle = allEmployees.find(emp => emp.id === id);
         if (!employeeToToggle) return;
         
         const willBeActive = !employeeToToggle.is_active;
@@ -141,7 +139,7 @@ export default function AdminEmployeeManagement() {
         try {
             await toggleEmployeeActive(id);
             showSuccess(`Employee has been ${willBeActive ? 'activated' : 'deactivated'} successfully!`);
-            await fetchEmployees();
+            await fetchEmployees(currentPage);
         } catch (error) {
             console.error('Error toggling employee active status:', error);
             showError('Failed to update employee status. Please try again.');
@@ -177,11 +175,10 @@ export default function AdminEmployeeManagement() {
             fetchEmployees(newPage);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-    }
+    };
 
-
-    // Get unique roles
-    const uniqueRoles = [...new Set(employees.map(emp => emp.role).filter(Boolean))];
+    // Get unique roles from current page employees
+    const uniqueRoles = [...new Set(allEmployees.map(emp => emp.role).filter(Boolean))];
 
     return (
         <ProtectedLayout currentPath={location.pathname}>
@@ -330,7 +327,7 @@ export default function AdminEmployeeManagement() {
                                                 </td>
                                                 <td className="px-6 py-4 text-sm">
                                                     <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                                        employee.role === 'admin'
+                                                        employee.role === 'ADMIN'
                                                             ? 'bg-purple-100 text-purple-700'
                                                             : 'bg-blue-100 text-blue-700'
                                                     }`}>
@@ -338,7 +335,7 @@ export default function AdminEmployeeManagement() {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 flex gap-3 text-sm justify-end">
-                                                    <div className="flex gap-2">
+                                                    <div className="flex gap-2 flex-wrap">
                                                         <button
                                                             onClick={() => handleEditClick(employee)}
                                                             className="px-3 py-2 bg-blue-50 text-blue-600 font-semibold rounded-lg hover:bg-blue-100 transition-colors text-sm flex items-center gap-2"
@@ -368,11 +365,10 @@ export default function AdminEmployeeManagement() {
                                                             Delete
                                                         </button>
                                                         <button
-                                                        onClick ={() => handleResendInviteEmail(employee.id)}
-                                                        className="px-3 py-2 bg-green-50 text-green-600 font-semibold rounded-lg hover:bg-green-100 transition-colors text-sm flex items-center gap-2"
+                                                            onClick={() => handleResendInviteEmail(employee.id)}
+                                                            className="px-3 py-2 bg-green-50 text-green-600 font-semibold rounded-lg hover:bg-green-100 transition-colors text-sm flex items-center gap-2"
                                                         >
-                                                        Resend Email
-
+                                                            Resend Email
                                                         </button>
                                                     </div>
                                                 </td>

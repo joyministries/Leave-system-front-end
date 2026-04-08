@@ -2,7 +2,7 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/authhook';
 import { useAlert } from '../hooks/alerthook';
 import { useEffect, useState } from 'react';
-import { getMyLeaves, getMyLeaveSummary, getLeaveTypes } from '../services/ApiClient';
+import { getMyLeaves, getLeaveTypes } from '../services/ApiClient';
 import { getUserDisplayName } from '../utils/userUtils';
 import ProtectedLayout from '../components/ProtectedLayout';
 import ApplyLeaveModal from '../components/ApplyLeaveModal';
