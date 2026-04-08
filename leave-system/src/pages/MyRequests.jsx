@@ -123,30 +123,49 @@ export default function MyRequests() {
   const { showError } = useAlert();
   const [loading, setLoading] = useState(false);
 
-  const handleViewDocument = async (leaveId) => {
-  try {
-    const response = await downloadLeaveDocument(leaveId);
-    
-    const contentDisposition = response.headers['content-disposition'];
-    let fileName = 'document';
-    if (contentDisposition) {
-      const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
-      if (fileNameMatch) fileName = fileNameMatch[1];
-    }
-    
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', fileName);
-    document.body.appendChild(link);
-    link.click();
-    link.parentNode.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error('Error downloading document:', error);
-    showError('Failed to download document. Please try again.');
-  }
-};
+    const handleViewDocument = async (leaveId) => {
+      try {
+        const response = await downloadLeaveDocument(leaveId);
+        
+        // Get filename and MIME type from headers
+        const contentDisposition = response.headers['content-disposition'];
+        const contentType = response.headers['content-type'] || 'application/octet-stream';
+        
+        let fileName = 'document';
+        if (contentDisposition) {
+          const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+          if (fileNameMatch && fileNameMatch[1]) {
+            fileName = fileNameMatch[1];
+          }
+        }
+        
+        // Create blob with correct MIME type
+        const blobData = new Blob([response.data], { type: contentType });
+        
+        // Create object URL and open in new tab
+        const url = window.URL.createObjectURL(blobData);
+        const newWindow = window.open(url, '_blank');
+        
+        if (!newWindow) {
+          showError('Please allow popups to view the document.');
+          // Fallback to download if popup blocked
+          const link = document.createElement('a');
+          link.href = url;
+          link.setAttribute('download', fileName);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          return;
+        }
+        
+        // Cleanup URL after a delay
+        setTimeout(() => window.URL.revokeObjectURL(url), 5000);
+        
+      } catch (error) {
+        console.error('Error opening document:', error);
+        showError('Failed to open document. Please try again.');
+      }
+    };
 
   useEffect(() => {
     const fetchLeaveHistory = async () => {
