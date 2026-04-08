@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { getMyLeaves } from '../services/ApiClient';
+import { getMyLeaves, downloadLeaveDocument } from '../services/ApiClient';
 import { useAlert } from '../hooks/alerthook';
 import ProtectedLayout from '../components/ProtectedLayout';
 
@@ -24,7 +24,7 @@ const getStatusColor = (status) => {
 };
 
 // Request Table Row Component
-const RequestTableRow = ({ request }) => {
+const RequestTableRow = ({ request, onViewDocument }) => {
   if (!request || !request.id) return null;
 
   return (
@@ -51,26 +51,24 @@ const RequestTableRow = ({ request }) => {
           {request.status || 'Pending'}
         </span>
       </td>
-      <td className="px-4 py-3 text-sm">
-        {request.supporting_document ? (
-          <a 
-            href={request.supporting_document} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-blue-600 font-semibold hover:underline"
-          >
-            View
-          </a>
-        ) : (
-          <span className="text-slate-400">-</span>
-        )}
-      </td>
+    <td className="px-4 py-3 text-sm">
+  {request.supporting_document ? (
+    <button
+      onClick={() => onViewDocument(request.id)}
+      className="text-blue-600 font-semibold hover:underline cursor-pointer"
+    >
+      View
+    </button>
+  ) : (
+    <span className="text-slate-400">-</span>
+  )}
+</td>
     </tr>
   );
 };
 
 // Requests Table Component
-const RequestsTable = ({ requests }) => {
+const RequestsTable = ({ requests, onViewDocument }) => {
   if (!requests || requests.length === 0) {
     return (
       <div className="bg-slate-50 rounded-xl p-8 text-center border border-dashed border-slate-300">
@@ -96,7 +94,7 @@ const RequestsTable = ({ requests }) => {
           </thead>
           <tbody>
             {requests.map((request) => (
-              <RequestTableRow key={request.id} request={request} />
+              <RequestTableRow key={request.id} request={request} onViewDocument={onViewDocument} />
             ))}
           </tbody>
         </table>
@@ -106,7 +104,7 @@ const RequestsTable = ({ requests }) => {
 };
 
 // Status Section Component
-const StatusSection = ({ title, requests: sectionRequests, icon, bgColor }) => (
+const StatusSection = ({ title, requests: sectionRequests, icon, bgColor, onViewDocument }) => (
   <div>
     <div className={`flex items-center gap-3 mb-4 p-3 rounded-lg ${bgColor}`}>
       <span className="text-lg">{icon}</span>
@@ -114,7 +112,7 @@ const StatusSection = ({ title, requests: sectionRequests, icon, bgColor }) => (
         {title} ({sectionRequests.length})
       </h3>
     </div>
-    <RequestsTable requests={sectionRequests} />
+    <RequestsTable requests={sectionRequests} onViewDocument={onViewDocument} />
   </div>
 );
 
@@ -124,6 +122,31 @@ export default function MyRequests() {
   const [requests, setRequests] = useState([]);
   const { showError } = useAlert();
   const [loading, setLoading] = useState(false);
+
+  const handleViewDocument = async (leaveId) => {
+  try {
+    const response = await downloadLeaveDocument(leaveId);
+    
+    const contentDisposition = response.headers['content-disposition'];
+    let fileName = 'document';
+    if (contentDisposition) {
+      const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
+      if (fileNameMatch) fileName = fileNameMatch[1];
+    }
+    
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Error downloading document:', error);
+    showError('Failed to download document. Please try again.');
+  }
+};
 
   useEffect(() => {
     const fetchLeaveHistory = async () => {
@@ -198,7 +221,7 @@ export default function MyRequests() {
           </div>
 
           {pendingRequests.length > 0 ? (
-            <RequestsTable requests={pendingRequests} />
+            <RequestsTable requests={pendingRequests} onViewDocument={handleViewDocument} />
           ) : (
             <div className="bg-slate-50 rounded-2xl p-8 text-center border border-dashed border-slate-300">
               <p className="text-slate-500">No pending requests</p>
@@ -212,6 +235,7 @@ export default function MyRequests() {
           requests={approvedRequests}
           icon="✅"
           bgColor="bg-green-50 border border-green-200"
+          onViewDocument={handleViewDocument}
         />
 
         {/* Rejected Requests */}
@@ -220,6 +244,7 @@ export default function MyRequests() {
           requests={rejectedRequests}
           icon="❌"
           bgColor="bg-red-50 border border-red-200"
+          onViewDocument={handleViewDocument}
         />
 
         {/* No Requests */}

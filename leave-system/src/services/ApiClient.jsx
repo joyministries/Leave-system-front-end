@@ -356,6 +356,24 @@ export const getMyLeaves = async () => {
   }
 };
 
+/**
+ * Download Leave Document
+ * GET /leaves/<id>/download_document/
+ * @param {*} leaveId 
+ * @returns 
+ */
+export const downloadLeaveDocument = async (leaveId) => {
+  try {
+    const response = await apiClient.get(`/leaves/${leaveId}/download_document/`, {
+      responseType: 'blob'
+    });
+    return response;
+  } catch (error) {
+    throw new Error('Failed to download leave document', { cause: error.message });
+  }
+};
+
+
 // =========================================================
 // LEAVE TYPES ENDPOINTS
 // =========================================================

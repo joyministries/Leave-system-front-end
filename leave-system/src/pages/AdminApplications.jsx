@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAlert } from '../hooks/alerthook';
-import { getPendingLeaves, getLeaveType, updateLeaveStatus } from '../services/ApiClient';
+import { getPendingLeaves, getLeaveType, updateLeaveStatus, downloadLeaveDocument } from '../services/ApiClient';
 import ProtectedLayout from '../components/ProtectedLayout';
 
 export default function AdminApplications() {
@@ -151,6 +151,33 @@ export default function AdminApplications() {
       showError('Failed to process application. Please try again.');
     }
   };
+  
+const handleDownloadDocument = async (leaveId) => {
+  try {
+    const response = await downloadLeaveDocument(leaveId);
+    
+    // Extract filename from content-disposition header
+    const contentDisposition = response.headers['content-disposition'];
+    let fileName = 'document';
+    if (contentDisposition) {
+      const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
+      if (fileNameMatch) fileName = fileNameMatch[1];
+    }
+    
+    // Create blob URL and trigger download
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Error downloading document:', error);
+    showError('Failed to download document. Please try again.');
+  }
+};
 
   return (
     <ProtectedLayout currentPath={location.pathname}>
@@ -211,14 +238,12 @@ export default function AdminApplications() {
                         </td>
                         <td className="px-6 py-4 text-sm">
                           {app.supporting_document ? (
-                            <a 
-                              href={app.supporting_document} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-blue-600 font-semibold hover:underline"
-                            >
-                              View Document
-                            </a>
+                             <button
+                                onClick={() => handleDownloadDocument(app.id)}
+                                className="text-blue-600 font-semibold hover:underline cursor-pointer"
+                              >
+                                View Document
+                              </button>
                           ) : (
                             <span className="text-slate-400 text-xs">No document</span>
                           )}
@@ -275,22 +300,20 @@ export default function AdminApplications() {
                             <p className="text-sm font-bold text-blue-600">{reviewModal.app.maxDays} days</p>
                         </div>
                     </div>
-                    {reviewModal.app.supporting_document && (
-                      <div className="mt-3 pt-3 border-t border-slate-300">
-                        <p className="text-xs font-bold text-slate-500 uppercase mb-2">Supporting Document</p>
-                        <a 
-                          href={reviewModal.app.supporting_document} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                          View Document
-                        </a>
-                      </div>
-                    )}
+                   {reviewModal.app.supporting_document && (
+                          <div className="mt-3 pt-3 border-t border-slate-300">
+                            <p className="text-xs font-bold text-slate-500 uppercase mb-2">Supporting Document</p>
+                            <button
+                              onClick={() => handleDownloadDocument(reviewModal.app.id)}
+                              className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              </svg>
+                              View Document
+                            </button>
+                          </div>
+                        )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-4">
