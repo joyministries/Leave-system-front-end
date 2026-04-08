@@ -97,7 +97,6 @@ export default function Dashboard() {
                 item.remaining_days = Math.max(0, item.max_days - item.used_days);
             });
 
-            console.log('Calculated summary with max days:', Object.values(summaryMap));
             return Object.values(summaryMap);
         } catch (error) {
             console.error('Error calculating leave summary:', error);
@@ -126,8 +125,6 @@ export default function Dashboard() {
                 // Calculate summary from leave types and approved leaves
                 const calculatedSummary = calculateLeaveSummary(typesData, approvedLeaves);
                 setMyLeaveSummary(calculatedSummary);
-                
-                console.log('Calculated Leave Summary:', calculatedSummary);
                 showSuccess('Welcome to your dashboard!');
             } catch (error) {
                 showError('Failed to load dashboard data');

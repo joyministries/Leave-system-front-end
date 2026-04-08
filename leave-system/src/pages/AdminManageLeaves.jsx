@@ -87,11 +87,6 @@ export default function AdminManageLeaves() {
                 });
                 showSuccess('Leave type updated successfully!');
             } else {
-                console.log('Creating leave type with data:', {
-                    name: formData.name.trim(),
-                    max_days: parseInt(formData.max_days),
-                    is_active: formData.is_active
-                });
                 // Create new leave type
                 await createLeaveType({
                     name: formData.name.trim(),

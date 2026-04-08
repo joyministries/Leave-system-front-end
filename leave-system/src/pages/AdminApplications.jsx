@@ -59,7 +59,6 @@ export default function AdminApplications() {
       setIsLoading(true);
       const res = await getPendingLeaves();
       const data = res.data;
-      console.log("Fetched pending applications data:\n", data);
       const leaveData = Array.isArray(data) ? data : data.results || [];
 
       // Get unique leave type codes

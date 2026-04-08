@@ -47,9 +47,6 @@ export default function AdminReports() {
       ]);
       const globalReports = globalResponse.data;
       const deptReports = deptResponse.data;
-
-      console.log('Global Reports:', globalReports);
-      console.log('Department Reports:', deptReports);
       const deptMap = [];
 
       Object.entries(deptReports).forEach(([inst, depts]) => {
@@ -93,9 +90,7 @@ export default function AdminReports() {
       try {
         console.log('Searching for employees with term:', employeeSearch);
         const res = await getEmployees({ search: employeeSearch });
-        console.log('Search results:', res);
         const results = Array.isArray(res.data) ? res.data : res.data.results || [];
-        console.log('Parsed search results:', results);
         // Keep to max 5 results for clean UI
         setSearchResults(results.slice(0, 5));
       } catch (error) {
@@ -112,9 +107,7 @@ export default function AdminReports() {
       console.log(`Fetching leaves for employee ${employeeId} - Page ${pageNum}`);
       // Passes employee_id and page to utilize backend optimization
       const res = await listLeaves({ employee: employeeId, page: pageNum });
-      console.log('Paginated leaves response:', res);
       const rawData = res.data;
-      console.log('Individual leaves data:', rawData);
 
       let leavesArray = [];
       let hasNextPage = false;
@@ -126,8 +119,6 @@ export default function AdminReports() {
         leavesArray = rawData;
         hasNextPage = false;
       }
-
-      console.log('Processed leaves array:', leavesArray);
       setIndividualLeaves(leavesArray);
       setHasNext(hasNextPage);
       setCurrentPage(pageNum);
@@ -157,11 +148,9 @@ export default function AdminReports() {
       console.log(`Fetching leave summary for employee ${employeeId}`);
       // Fetch all leaves to calculate summary by leave type
       const res = await getEmployeeLeaveSummary(employeeId);
-      console.log('Employee leave summary response:', res);
       const summary = res.data;
       
       setIndividualEmployeeSummary(summary);
-      console.log('Calculated employee leave summary:', summary);
     } catch (error) {
       console.error('Failed to load employee leave summary', error);
       setIndividualEmployeeSummary([]);

@@ -23,7 +23,6 @@ export default function AdminEmployeeManagement() {
             setIsLoading(true);
             const response = await getEmployees();
             const data = response.data.results;
-            console.log('Employees Response:', data);
             setEmployees(data);
         } catch (error) {
             console.error('Error fetching employees:', error);
@@ -80,8 +79,7 @@ export default function AdminEmployeeManagement() {
 
         try {
             setIsSubmitting(true);
-            const res = await handleUpdate(editingEmployee, editFormData);
-            console.log('Update response:', res);
+            await handleUpdate(editingEmployee, editFormData);
         } finally {
             setIsSubmitting(false);
         }
@@ -106,8 +104,7 @@ export default function AdminEmployeeManagement() {
     const handleDelete = async (id, name) => {
         if (window.confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) {
             try {
-                const res = await deactivateEmployee(id);
-                console.log('Deactivate response:', res);
+                await deactivateEmployee(id);
                 showSuccess('Employee record has been deleted successfully!');
                 await fetchEmployees();
             } catch (error) {
@@ -124,8 +121,7 @@ export default function AdminEmployeeManagement() {
         const willBeActive = !employeeToToggle.is_active;
 
         try {
-            const res = await toggleEmployeeActive(id);
-            console.log('Toggle active response:', res);
+            await toggleEmployeeActive(id);
             showSuccess(`Employee has been ${willBeActive ? 'activated' : 'deactivated'} successfully!`);
             await fetchEmployees();
         } catch (error) {
