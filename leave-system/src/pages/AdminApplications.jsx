@@ -95,7 +95,8 @@ export default function AdminApplications() {
           reason: item.reason || 'No reason provided',
           submittedDate: item.created_at ? new Date(item.created_at).toLocaleDateString() : 'N/A',
           extra_unpaid_days: item.extra_unpaid_days || 0,
-          leave_duration: item.leave_duration || 0
+          leave_duration: item.leave_duration || 0,
+          supporting_document: item.supporting_document || null
         };
       });
 
@@ -188,6 +189,7 @@ export default function AdminApplications() {
                       <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Department</th>
                       <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Leave Type</th>
                       <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Duration</th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Document</th>
                       <th className="px-6 py-4 text-center text-sm font-bold text-slate-900">Actions</th>
                     </tr>
                   </thead>
@@ -207,6 +209,20 @@ export default function AdminApplications() {
                         <td className="px-6 py-4 text-sm font-bold text-blue-600">
                             {app.leave_duration}
                             <p className="text-[10px] mt-1 text-orange-500"> Unpaid Days : {app.extra_unpaid_days}</p>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          {app.supporting_document ? (
+                            <a 
+                              href={app.supporting_document} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-blue-600 font-semibold hover:underline"
+                            >
+                              View Document
+                            </a>
+                          ) : (
+                            <span className="text-slate-400 text-xs">No document</span>
+                          )}
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex gap-2 justify-center">
@@ -260,6 +276,22 @@ export default function AdminApplications() {
                             <p className="text-sm font-bold text-blue-600">{reviewModal.app.maxDays} days</p>
                         </div>
                     </div>
+                    {reviewModal.app.supporting_document && (
+                      <div className="mt-3 pt-3 border-t border-slate-300">
+                        <p className="text-xs font-bold text-slate-500 uppercase mb-2">Supporting Document</p>
+                        <a 
+                          href={reviewModal.app.supporting_document} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                          View Document
+                        </a>
+                      </div>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-4">
