@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://leave-system-backend-9ofz.onrender.com/api/';
+const API_BASE_URL = 'http://127.0.0.1:8000/api/';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -16,7 +16,7 @@ apiClient.interceptors.request.use(
   (config) => {
     // Public endpoints that don't require authentication
     const publicEndpoints = [
-      '/auth/login/', 
+      '/auth/login/',
       '/auth/set-password/:uid/:token/',
       '/auth/password-reset/',
       '/auth/set-password/',
@@ -59,9 +59,9 @@ apiClient.interceptors.response.use(
   (error) => {
     const originalRequest = error.config;
     if (
-          error.response && 
-          error.response.status === 401 &&
-          !originalRequest.url.includes('/auth/login/')){
+      error.response &&
+      error.response.status === 401 &&
+      !originalRequest.url.includes('/auth/login/')) {
       console.error('Token invalid or expired. Logging out...');
 
       if (alertHandler) {
@@ -139,7 +139,7 @@ export const passwordResetRequest = async (email) => {
   }
 };
 
-  
+
 /**
  * Set Password for both post-login reset and email link reset
  * POST /auth/set-password/
@@ -245,7 +245,7 @@ export const applyLeave = async (leaveData) => {
     console.error('Leave application error headers:', error.response?.headers);
     console.error('Request config:', error.config);
     console.error('Full error details:', error);
-    
+
     // Pass the server error response forward so the modal can extract and display it
     const newError = new Error('Failed to apply for leave');
     newError.response = error.response;
@@ -370,6 +370,32 @@ export const downloadLeaveDocument = async (leaveId) => {
     return response;
   } catch (error) {
     throw new Error('Failed to download leave document', { cause: error.message });
+  }
+};
+
+/**
+ * Upload or replace a supporting document on an existing leave request.
+ * Only allowed for Sick Leave / Study Leave with PENDING or APPROVED status.
+ * POST /leaves/<id>/upload_document/
+ * @param {string} leaveId - UUID of the leave record
+ * @param {File}   file    - The file to upload (doctor's certificate, medication copy, etc.)
+ * @returns {Promise} Updated leave object from the server
+ */
+export const uploadLeaveDocument = async (leaveId, file) => {
+  try {
+    const formData = new FormData();
+    formData.append('supporting_document', file);
+
+    const response = await apiClient.post(`/leaves/${leaveId}/upload_document/`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response;
+  } catch (error) {
+    const newError = new Error('Failed to upload leave document');
+    newError.response = error.response;
+    throw newError;
   }
 };
 
@@ -596,7 +622,8 @@ export const resendInviteEmail = async (employeeId) => {
   try {
     const response = await apiClient.post(`/employees/${employeeId}/resend_invite/`);
     return response;
-  } catch (error) {    const errorMsg = error.response?.data?.error || error.response?.data?.detail || error.message || 'Unknown error occurred';
+  } catch (error) {
+    const errorMsg = error.response?.data?.error || error.response?.data?.detail || error.message || 'Unknown error occurred';
     const newError = new Error(`Failed to resend invite email: ${errorMsg}`);
     newError.response = error.response;
     throw newError;

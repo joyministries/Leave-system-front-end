@@ -8,7 +8,8 @@ import {
     MdPersonAddAlt1,
     MdSettings,
     MdPeopleAlt,
-    MdDomain
+    MdDomain,
+    MdListAlt
 } from 'react-icons/md';
 
 // A single source of truth for all routes in the application
@@ -47,6 +48,14 @@ export const ALL_MENU_ITEMS = [
         allowedRoles: ['admin'],
         description: 'Review and process leave applications',
         navIcon: MdEventNote
+    },
+    {
+        id: 'admin-all-leaves',
+        label: 'All Leave Records',
+        path: '/admin/all-leaves',
+        allowedRoles: ['admin'],
+        description: 'Browse all leave requests by month with pagination',
+        navIcon: MdListAlt
     },
     {
         id: 'admin-employees',

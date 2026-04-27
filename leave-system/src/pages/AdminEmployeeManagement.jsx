@@ -1,5 +1,5 @@
 //src/pages/AdminEmployeeManagement.jsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAlert } from '../hooks/alerthook';
 import { deactivateEmployee, getEmployees, resendInviteEmail, updateEmployee, toggleEmployeeActive } from '../services/ApiClient';
@@ -15,6 +15,20 @@ export default function AdminEmployeeManagement() {
     const [editingEmployee, setEditingEmployee] = useState(null);
     const [editFormData, setEditFormData] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
+    // Kebab menu — tracks which employee row has its dropdown open
+    const [openMenuId, setOpenMenuId] = useState(null);
+    const menuRef = useRef(null);
+
+    // Close dropdown when clicking anywhere outside
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (menuRef.current && !menuRef.current.contains(e.target)) {
+                setOpenMenuId(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -308,7 +322,7 @@ export default function AdminEmployeeManagement() {
                                             <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Name</th>
                                             <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Email</th>
                                             <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Role</th>
-                                            <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Actions</th>
+                                            <th className="px-6 py-4 text-center text-sm font-bold text-slate-900 w-16">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -334,42 +348,88 @@ export default function AdminEmployeeManagement() {
                                                         {employee.role}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 flex gap-3 text-sm justify-end">
-                                                    <div className="flex gap-2 flex-wrap">
+
+                                                {/* ── Kebab menu ── */}
+                                                <td className="px-4 py-3 text-center">
+                                                    <div className="relative inline-block" ref={openMenuId === employee.id ? menuRef : null}>
+
+                                                        {/* ⋮ Trigger */}
                                                         <button
-                                                            onClick={() => handleEditClick(employee)}
-                                                            className="px-3 py-2 bg-blue-50 text-blue-600 font-semibold rounded-lg hover:bg-blue-100 transition-colors text-sm flex items-center gap-2"
+                                                            onClick={() => setOpenMenuId(prev => prev === employee.id ? null : employee.id)}
+                                                            className="flex items-center justify-center w-9 h-9 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors mx-auto"
+                                                            aria-label="Employee actions"
                                                         >
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                            {/* Three vertical dots */}
+                                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                                                <circle cx="12" cy="5" r="1.5" />
+                                                                <circle cx="12" cy="12" r="1.5" />
+                                                                <circle cx="12" cy="19" r="1.5" />
                                                             </svg>
-                                                            Edit
                                                         </button>
-                                                       <button
-                                                            onClick={() => handleToggleActive(employee.id)}
-                                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                                                              employee.is_active 
-                                                                ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' 
-                                                                : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                                                            }`}
-                                                        >
-                                                                {employee.is_active ? 'Deactivate' : 'Activate'}
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDelete(employee.id, `${employee.first_name} ${employee.last_name}`)}
-                                                            className="px-3 py-2 bg-red-50 text-red-600 font-semibold rounded-lg hover:bg-red-100 transition-colors text-sm flex items-center gap-2"
-                                                        >
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                            </svg>
-                                                            Delete
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleResendInviteEmail(employee.id)}
-                                                            className="px-3 py-2 bg-green-50 text-green-600 font-semibold rounded-lg hover:bg-green-100 transition-colors text-sm flex items-center gap-2"
-                                                        >
-                                                            Resend Email
-                                                        </button>
+
+                                                        {/* Dropdown */}
+                                                        {openMenuId === employee.id && (
+                                                            <div className="absolute right-0 z-50 mt-1 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1 overflow-hidden animate-fade-in">
+
+                                                                {/* Edit */}
+                                                                <button
+                                                                    onClick={() => { handleEditClick(employee); setOpenMenuId(null); }}
+                                                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                                                                >
+                                                                    <svg className="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                                    </svg>
+                                                                    Edit Employee
+                                                                </button>
+
+                                                                {/* Activate / Deactivate */}
+                                                                <button
+                                                                    onClick={() => { handleToggleActive(employee.id); setOpenMenuId(null); }}
+                                                                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                                                                        employee.is_active
+                                                                            ? 'text-amber-700 hover:bg-amber-50'
+                                                                            : 'text-emerald-700 hover:bg-emerald-50'
+                                                                    }`}
+                                                                >
+                                                                    {employee.is_active ? (
+                                                                        <svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                                                        </svg>
+                                                                    ) : (
+                                                                        <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                        </svg>
+                                                                    )}
+                                                                    {employee.is_active ? 'Deactivate Account' : 'Activate Account'}
+                                                                </button>
+
+                                                                {/* Resend invite */}
+                                                                <button
+                                                                    onClick={() => { handleResendInviteEmail(employee.id); setOpenMenuId(null); }}
+                                                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                                                                >
+                                                                    <svg className="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                                                    </svg>
+                                                                    Resend Invite Email
+                                                                </button>
+
+                                                                {/* Divider */}
+                                                                <div className="my-1 border-t border-slate-100" />
+
+                                                                {/* Delete */}
+                                                                <button
+                                                                    onClick={() => { handleDelete(employee.id, `${employee.first_name} ${employee.last_name}`); setOpenMenuId(null); }}
+                                                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                                                >
+                                                                    <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                    </svg>
+                                                                    Delete Employee
+                                                                </button>
+
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>

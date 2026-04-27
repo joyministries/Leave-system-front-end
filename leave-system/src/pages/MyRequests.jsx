@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { getMyLeaves, downloadLeaveDocument } from '../services/ApiClient';
+import { getMyLeaves, downloadLeaveDocument, uploadLeaveDocument } from '../services/ApiClient';
 import { useAlert } from '../hooks/alerthook';
 import ProtectedLayout from '../components/ProtectedLayout';
 
@@ -23,9 +23,25 @@ const getStatusColor = (status) => {
   return 'bg-slate-100 text-slate-800';
 };
 
+// Determine whether a leave row should show an upload button.
+// Matches the backend rule: PENDING or APPROVED + Sick/Study leave type only.
+const canUploadDocument = (request) => {
+  const uploadableStatuses = ['pending', 'approved'];
+  const uploadableTypes = ['sick leave', 'study leave'];
+  const statusOk = uploadableStatuses.includes((request.status || '').toLowerCase());
+  const typeOk = uploadableTypes.includes(
+    (request.leave_type_name || request.leave_type || '').toLowerCase()
+  );
+  return statusOk && typeOk;
+};
+
 // Request Table Row Component
-const RequestTableRow = ({ request, onViewDocument }) => {
+const RequestTableRow = ({ request, onViewDocument, onUploadDocument, uploading }) => {
   if (!request || !request.id) return null;
+
+  const showUpload = canUploadDocument(request);
+  const hasDoc = Boolean(request.supporting_document);
+  const isUploading = uploading === request.id;
 
   return (
     <tr className="border-t border-slate-200 hover:bg-slate-50 transition-colors">
@@ -51,24 +67,50 @@ const RequestTableRow = ({ request, onViewDocument }) => {
           {request.status || 'Pending'}
         </span>
       </td>
-    <td className="px-4 py-3 text-sm">
-  {request.supporting_document ? (
-    <button
-      onClick={() => onViewDocument(request.id)}
-      className="text-blue-600 font-semibold hover:underline cursor-pointer"
-    >
-      View
-    </button>
-  ) : (
-    <span className="text-slate-400">-</span>
-  )}
-</td>
+
+      {/* Document column */}
+      <td className="px-4 py-3 text-sm">
+        <div className="flex flex-col gap-1">
+          {/* View button — shown when a document already exists */}
+          {hasDoc && (
+            <button
+              onClick={() => onViewDocument(request.id)}
+              className="text-blue-600 font-semibold hover:underline cursor-pointer text-left"
+            >
+              View
+            </button>
+          )}
+
+          {/* Upload / Replace button — only for eligible leave types & statuses */}
+          {showUpload && (
+            <button
+              onClick={() => onUploadDocument(request.id)}
+              disabled={isUploading}
+              className={
+                `text-xs font-semibold px-2 py-1 rounded transition-colors cursor-pointer ` +
+                (isUploading
+                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  : hasDoc
+                    ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200')
+              }
+            >
+              {isUploading ? 'Uploading…' : hasDoc ? '↻ Replace' : '↑ Upload'}
+            </button>
+          )}
+
+          {/* No action available — rejected / cancelled / non-sick leave with no doc */}
+          {!hasDoc && !showUpload && (
+            <span className="text-slate-400">—</span>
+          )}
+        </div>
+      </td>
     </tr>
   );
 };
 
 // Requests Table Component
-const RequestsTable = ({ requests, onViewDocument }) => {
+const RequestsTable = ({ requests, onViewDocument, onUploadDocument, uploading }) => {
   if (!requests || requests.length === 0) {
     return (
       <div className="bg-slate-50 rounded-xl p-8 text-center border border-dashed border-slate-300">
@@ -94,7 +136,13 @@ const RequestsTable = ({ requests, onViewDocument }) => {
           </thead>
           <tbody>
             {requests.map((request) => (
-              <RequestTableRow key={request.id} request={request} onViewDocument={onViewDocument} />
+              <RequestTableRow
+                key={request.id}
+                request={request}
+                onViewDocument={onViewDocument}
+                onUploadDocument={onUploadDocument}
+                uploading={uploading}
+              />
             ))}
           </tbody>
         </table>
@@ -104,7 +152,7 @@ const RequestsTable = ({ requests, onViewDocument }) => {
 };
 
 // Status Section Component
-const StatusSection = ({ title, requests: sectionRequests, icon, bgColor, onViewDocument }) => (
+const StatusSection = ({ title, requests: sectionRequests, icon, bgColor, onViewDocument, onUploadDocument, uploading }) => (
   <div>
     <div className={`flex items-center gap-3 mb-4 p-3 rounded-lg ${bgColor}`}>
       <span className="text-lg">{icon}</span>
@@ -112,7 +160,12 @@ const StatusSection = ({ title, requests: sectionRequests, icon, bgColor, onView
         {title} ({sectionRequests.length})
       </h3>
     </div>
-    <RequestsTable requests={sectionRequests} onViewDocument={onViewDocument} />
+    <RequestsTable
+      requests={sectionRequests}
+      onViewDocument={onViewDocument}
+      onUploadDocument={onUploadDocument}
+      uploading={uploading}
+    />
   </div>
 );
 
@@ -120,8 +173,13 @@ export default function MyRequests() {
   const location = useLocation();
   const navigate = useNavigate();
   const [requests, setRequests] = useState([]);
-  const { showError } = useAlert();
+  const { showError, showSuccess } = useAlert();
   const [loading, setLoading] = useState(false);
+  // ID of the leave currently being uploaded to — used to show a spinner on the right row
+  const [uploadingLeaveId, setUploadingLeaveId] = useState(null);
+  // Tracks which leave ID the hidden file-input is targeting
+  const uploadTargetRef = useRef(null);
+  const fileInputRef = useRef(null);
 
     const handleViewDocument = async (leaveId) => {
       try {
@@ -167,6 +225,47 @@ export default function MyRequests() {
       }
     };
 
+  // ── Upload handler ──────────────────────────────────────────────────────────
+  // Called when the employee clicks "↑ Upload" or "↻ Replace" on a leave row.
+  // We store the target leave ID in a ref then programmatically open a file picker.
+  const handleUploadDocument = (leaveId) => {
+    uploadTargetRef.current = leaveId;
+    // Reset the input so picking the same file still fires onChange
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    fileInputRef.current?.click();
+  };
+
+  // Fired after the employee picks a file from the OS dialog
+  const handleFileSelected = async (e) => {
+    const file = e.target.files?.[0];
+    const leaveId = uploadTargetRef.current;
+    if (!file || !leaveId) return;
+
+    setUploadingLeaveId(leaveId);
+    try {
+      const res = await uploadLeaveDocument(leaveId, file);
+      const updatedLeave = res.data?.leave;
+
+      // Patch the updated leave record into local state so the View button appears immediately
+      if (updatedLeave) {
+        setRequests((prev) =>
+          prev.map((req) => (req.id === leaveId ? { ...req, ...updatedLeave } : req))
+        );
+      }
+      showSuccess('Document uploaded successfully!');
+    } catch (error) {
+      const serverMsg =
+        error.response?.data?.error ||
+        error.response?.data?.detail ||
+        'Failed to upload document. Please try again.';
+      showError(serverMsg);
+    } finally {
+      setUploadingLeaveId(null);
+      uploadTargetRef.current = null;
+    }
+  };
+
+  // ── Fetch leave history ──────────────────────────────────────────────────────
   useEffect(() => {
     const fetchLeaveHistory = async () => {
       setLoading(true);
@@ -204,6 +303,15 @@ export default function MyRequests() {
 
   return (
     <ProtectedLayout currentPath={location.pathname}>
+      {/* Hidden file input — triggered programmatically from Upload/Replace buttons */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+        className="hidden"
+        onChange={handleFileSelected}
+      />
+
       <div className="min-h-screen bg-slate-50 p-6 sm:p-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
@@ -240,7 +348,12 @@ export default function MyRequests() {
           </div>
 
           {pendingRequests.length > 0 ? (
-            <RequestsTable requests={pendingRequests} onViewDocument={handleViewDocument} />
+            <RequestsTable
+              requests={pendingRequests}
+              onViewDocument={handleViewDocument}
+              onUploadDocument={handleUploadDocument}
+              uploading={uploadingLeaveId}
+            />
           ) : (
             <div className="bg-slate-50 rounded-2xl p-8 text-center border border-dashed border-slate-300">
               <p className="text-slate-500">No pending requests</p>
@@ -255,6 +368,8 @@ export default function MyRequests() {
           icon="✅"
           bgColor="bg-green-50 border border-green-200"
           onViewDocument={handleViewDocument}
+          onUploadDocument={handleUploadDocument}
+          uploading={uploadingLeaveId}
         />
 
         {/* Rejected Requests */}
@@ -264,6 +379,8 @@ export default function MyRequests() {
           icon="❌"
           bgColor="bg-red-50 border border-red-200"
           onViewDocument={handleViewDocument}
+          onUploadDocument={handleUploadDocument}
+          uploading={uploadingLeaveId}
         />
 
         {/* No Requests */}

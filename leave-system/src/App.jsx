@@ -11,6 +11,7 @@ import AddEmployee from "./pages/AddEmployee.jsx";
 import AdminManageLeaves from "./pages/AdminManageLeaves.jsx";
 import AdminEmployeeManagement from "./pages/AdminEmployeeManagement.jsx";
 import AdminBranches from "./pages/AdminBranches.jsx";
+import AdminAllLeaves from "./pages/AdminAllLeaves.jsx";
 import SetPassword from "./pages/SetPassword.jsx";
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
       {/* Protected Admin Routes */}
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
       <Route path="/admin/applications" element={<AdminApplications />} />
+      <Route path="/admin/all-leaves" element={<AdminAllLeaves />} />
       <Route path="/admin/add-employee" element={<AddEmployee />} />
       <Route path="/admin/reports" element={<AdminReports />} />
       <Route path="/admin/manage/leaves" element={<AdminManageLeaves />} />
