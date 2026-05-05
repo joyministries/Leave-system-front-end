@@ -5,7 +5,7 @@ import { applyLeave, getLeaveTypes } from '../services/ApiClient';
 export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
   const [formData, setFormData] = useState({
     leaveTypeName: '',
-    allowedMonth: '',
+    allowedMonths: [],   // array of integers e.g. [1, 6, 12]
     startDate: '',
     endDate: '',
     reason: '',
@@ -82,7 +82,9 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
             ...prev,
             leaveTypeId: initialPolicy.id,
             leaveTypeName: initialPolicy.name,
-            allowedMonth: initialPolicy.allowed_month,
+            allowedMonths: Array.isArray(initialPolicy.allowed_months)
+              ? initialPolicy.allowed_months
+              : [],
           }));
         } else {
           throw new Error('API returned empty types list');
@@ -112,7 +114,9 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
           ...prev,
           leaveTypeId: selectedType.id,
           leaveTypeName: selectedType.name,
-          allowedMonth: selectedType.allowed_month,
+          allowedMonths: Array.isArray(selectedType.allowed_months)
+            ? selectedType.allowed_months
+            : [],
         }));
         setSelectedTypeMaxDays(selectedType.max_days);
         setSelectedTypeMaxDuration(selectedType.max_duration || selectedType.max_days);
@@ -174,15 +178,7 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
       return;
     }
 
-    // Check if Special Leave is only available in June
     const leaveTypeName = formData.leaveTypeName || '';
-    if (leaveTypeName.toLowerCase().includes('special')) {
-      const currentMonth = new Date().getMonth() + 1;
-      if (currentMonth !== 6) {
-        showError('Special Leave is only available during the month of June.');
-        return;
-      }
-    }
 
     // Check if document is required for sick or study leave
     if (requiresDocument(leaveTypeName) && !formData.document) {
@@ -190,14 +186,21 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
       return;
     }
 
-   // Check dynamic allowed_month rule
-    if (formData.allowedMonth) {
+    // Check dynamic allowed_months rule (multi-month support)
+    if (formData.allowedMonths && formData.allowedMonths.length > 0) {
       const startMonth = new Date(formData.startDate).getMonth() + 1;
-      const endMonth = new Date(formData.endDate).getMonth() + 1;
-      
-      if (startMonth !== formData.allowedMonth || endMonth !== formData.allowedMonth) {
-        const monthName = new Date(2000, formData.allowedMonth - 1, 1).toLocaleString('default', { month: 'long' });
-        showError(`${formData.leaveTypeName} can only be taken strictly within the month of ${monthName}.`);
+      const endMonth   = new Date(formData.endDate).getMonth() + 1;
+
+      if (
+        !formData.allowedMonths.includes(startMonth) ||
+        !formData.allowedMonths.includes(endMonth)
+      ) {
+        const monthNames = formData.allowedMonths
+          .map(m => new Date(2000, m - 1, 1).toLocaleString('default', { month: 'long' }))
+          .join(', ');
+        showError(
+          `${formData.leaveTypeName} can only be taken in the following month(s): ${monthNames}.`
+        );
         return;
       }
     }
@@ -373,10 +376,17 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
                     <option key={type.id} value={type.id}>{type.name}</option>
                   ))}
                 </select>
-                {selectedTypeMaxDays && selectedTypeMaxDuration && (
+                {selectedTypeMaxDays && (
                   <div className="text-xs text-slate-600 mt-2 space-y-1">
                     <p>Yearly allocation: <span className="font-semibold">{selectedTypeMaxDays} days</span></p>
-                    <p>Max per request: <span className="font-semibold">{selectedTypeMaxDuration} days</span></p>
+                    {formData.allowedMonths && formData.allowedMonths.length > 0 && (
+                      <p className="text-amber-700 font-medium">
+                        📅 Only available in:{' '}
+                        {formData.allowedMonths
+                          .map(m => new Date(2000, m - 1, 1).toLocaleString('default', { month: 'long' }))
+                          .join(', ')}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -506,10 +516,10 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
 
               <button
                 type="submit"
-                disabled={unpaidLeaveDays > 0 || isLoadingtypes || isSubmitting}
+                disabled={isLoadingtypes || isSubmitting}
                 className="w-full bg-slate-900 hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg sm:rounded-xl transition-all shadow-lg text-sm sm:text-base min-h-[44px] flex items-center justify-center"
               >
-                {isSubmitting ? 'Submitting...' : 'Submit Request'}
+                {isSubmitting ? 'Submitting...' : unpaidLeaveDays > 0 ? 'Submit Request (includes unpaid days)' : 'Submit Request'}
               </button>
 
               <button

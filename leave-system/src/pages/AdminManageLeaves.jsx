@@ -5,29 +5,131 @@ import { useAlert } from '../hooks/alerthook';
 import { getLeaveTypes, updateLeaveType, deleteLeaveType, createLeaveType, toggleLeaveTypeActive } from '../services/ApiClient';
 import ProtectedLayout from '../components/ProtectedLayout';
 
+const MONTHS = [
+    { value: 1,  label: 'Jan', full: 'January' },
+    { value: 2,  label: 'Feb', full: 'February' },
+    { value: 3,  label: 'Mar', full: 'March' },
+    { value: 4,  label: 'Apr', full: 'April' },
+    { value: 5,  label: 'May', full: 'May' },
+    { value: 6,  label: 'Jun', full: 'June' },
+    { value: 7,  label: 'Jul', full: 'July' },
+    { value: 8,  label: 'Aug', full: 'August' },
+    { value: 9,  label: 'Sep', full: 'September' },
+    { value: 10, label: 'Oct', full: 'October' },
+    { value: 11, label: 'Nov', full: 'November' },
+    { value: 12, label: 'Dec', full: 'December' },
+];
+
+function MonthPicker({ selected, onChange }) {
+    const toggle = (month) => {
+        if (selected.includes(month)) {
+            onChange(selected.filter(m => m !== month));
+        } else {
+            onChange([...selected, month].sort((a, b) => a - b));
+        }
+    };
+
+    const selectAll = () => onChange(MONTHS.map(m => m.value));
+    const clearAll  = () => onChange([]);
+
+    return (
+        <div>
+            <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-semibold text-slate-700">
+                    Allowed Months
+                    <span className="ml-1 text-slate-400 font-normal">(Optional — leave empty for year-round)</span>
+                </label>
+                <div className="flex gap-3 text-xs">
+                    <button type="button" onClick={selectAll}
+                        className="text-blue-600 hover:text-blue-800 font-medium transition-colors">
+                        Select all
+                    </button>
+                    <button type="button" onClick={clearAll}
+                        className="text-slate-500 hover:text-slate-700 font-medium transition-colors">
+                        Clear
+                    </button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                {MONTHS.map(({ value, label, full }) => {
+                    const active = selected.includes(value);
+                    return (
+                        <button
+                            key={value}
+                            type="button"
+                            title={full}
+                            onClick={() => toggle(value)}
+                            className={`
+                                py-2 rounded-lg text-sm font-semibold border-2 transition-all duration-150 select-none
+                                ${active
+                                    ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                                    : 'bg-white border-slate-200 text-slate-500 hover:border-blue-300 hover:text-blue-600'
+                                }
+                            `}
+                        >
+                            {label}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {selected.length > 0 && (
+                <p className="mt-2 text-xs text-slate-500">
+                    Selected: <span className="font-medium text-blue-700">
+                        {selected.map(m => MONTHS[m - 1].full).join(', ')}
+                    </span>
+                </p>
+            )}
+            {selected.length === 0 && (
+                <p className="mt-2 text-xs text-slate-400 italic">
+                    No restriction — available year-round.
+                </p>
+            )}
+        </div>
+    );
+}
+
+function AllowedMonthsBadges({ months }) {
+    if (!months || months.length === 0) {
+        return <span className="text-xs text-slate-400 italic">Year-round</span>;
+    }
+    return (
+        <div className="flex flex-wrap gap-1">
+            {months.map(m => (
+                <span key={m}
+                    className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
+                    {MONTHS[m - 1]?.full ?? m}
+                </span>
+            ))}
+        </div>
+    );
+}
+
 export default function AdminManageLeaves() {
-    const location = useLocation();
-    const navigate = useNavigate();
+    const location  = useLocation();
+    const navigate  = useNavigate();
     const { showSuccess, showError } = useAlert();
-    const [leaveTypes, setLeaveTypes] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [showForm, setShowForm] = useState(false);
+
+    const [leaveTypes,    setLeaveTypes]    = useState([]);
+    const [isLoading,     setIsLoading]     = useState(true);
+    const [showForm,      setShowForm]      = useState(false);
     const [isFormLoading, setIsFormLoading] = useState(false);
-    const [editingId, setEditingId] = useState(null);
+    const [editingId,     setEditingId]     = useState(null);
+
     const [formData, setFormData] = useState({
-        name: '',
-        max_days: '',
-        is_active: true,
-        allowed_month: ''
+        name:           '',
+        max_days:       '',
+        is_active:      true,
+        allowed_months: [],   // array of month numbers, e.g. [1, 6, 12]
     });
 
-    // Fetch leave types on component mount
+    // ── Fetch ──────────────────────────────────────────────────────────────
     const fetchLeaveTypes = useCallback(async () => {
         try {
             setIsLoading(true);
             const data = await getLeaveTypes();
-            const leaveTypesArray = Array.isArray(data) ? data : data.results || [];
-            setLeaveTypes(leaveTypesArray);
+            setLeaveTypes(Array.isArray(data) ? data : data.results || []);
         } catch (error) {
             console.error('Error fetching leave types:', error);
             showError('Failed to load leave types. Please try again.');
@@ -36,36 +138,23 @@ export default function AdminManageLeaves() {
         }
     }, [showError]);
 
-    useEffect(() => {
-        fetchLeaveTypes();
-    }, [fetchLeaveTypes]);
+    useEffect(() => { fetchLeaveTypes(); }, [fetchLeaveTypes]);
 
-    // Handle form input changes
+    // ── Handlers ───────────────────────────────────────────────────────────
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    // Reset form
     const resetForm = () => {
-        setFormData({
-            name: '',
-            max_days: '',
-            is_active: true,
-            allowed_month: ''
-        });
+        setFormData({ name: '', max_days: '', is_active: true, allowed_months: [] });
         setEditingId(null);
         setShowForm(false);
     };
 
-    // Handle form submission
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Validation
         if (!formData.name.trim()) {
             showError('Leave type name is required');
             return;
@@ -75,29 +164,32 @@ export default function AdminManageLeaves() {
             return;
         }
 
+        // Send null when no months are selected (means year-round)
+        const allowed_months = formData.allowed_months.length > 0
+            ? formData.allowed_months
+            : null;
+
         try {
             setIsFormLoading(true);
 
             if (editingId) {
-                // Update existing leave type
                 await updateLeaveType(editingId, {
-                    name: formData.name.trim(),
-                    max_days: parseInt(formData.max_days),
-                    is_active: formData.is_active,
+                    name:           formData.name.trim(),
+                    max_days:       parseInt(formData.max_days),
+                    is_active:      formData.is_active,
+                    allowed_months,
                 });
                 showSuccess('Leave type updated successfully!');
             } else {
-                // Create new leave type
                 await createLeaveType({
-                    name: formData.name.trim(),
-                    max_days: parseInt(formData.max_days),
-                    allowed_month: formData.allowed_month ? parseInt(formData.allowed_month) : null,
-                    is_active: formData.is_active
+                    name:           formData.name.trim(),
+                    max_days:       parseInt(formData.max_days),
+                    is_active:      formData.is_active,
+                    allowed_months,
                 });
                 showSuccess('Leave type created successfully!');
             }
 
-            // Refresh the list
             await fetchLeaveTypes();
             resetForm();
         } catch (error) {
@@ -108,18 +200,19 @@ export default function AdminManageLeaves() {
         }
     };
 
-    // Handle edit
     const handleEdit = (leaveType) => {
         setFormData({
-            name: leaveType.name,
-            max_days: leaveType.max_days,
-            is_active: leaveType.is_active
+            name:           leaveType.name,
+            max_days:       leaveType.max_days,
+            is_active:      leaveType.is_active,
+            allowed_months: Array.isArray(leaveType.allowed_months)
+                ? leaveType.allowed_months
+                : [],
         });
         setEditingId(leaveType.id);
         setShowForm(true);
     };
 
-    // Handle delete
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this leave type? This action cannot be undone.')) {
             try {
@@ -133,7 +226,6 @@ export default function AdminManageLeaves() {
         }
     };
 
-    // Handle toggle active status
     const handleToggleActive = async (id) => {
         try {
             await toggleLeaveTypeActive(id);
@@ -145,10 +237,12 @@ export default function AdminManageLeaves() {
         }
     };
 
+    // ── Render ─────────────────────────────────────────────────────────────
     return (
         <ProtectedLayout currentPath={location.pathname}>
             <div className="min-h-screen bg-slate-50 p-6 sm:p-8">
                 <div className="max-w-7xl mx-auto">
+
                     {/* Header */}
                     <div className="mb-8">
                         <button
@@ -160,30 +254,31 @@ export default function AdminManageLeaves() {
                             </svg>
                             Back to Dashboard
                         </button>
-                    <div className="flex items-start justify-between mb-8">
-                        <div>
-                            <h1 className="text-4xl font-black text-slate-900 mb-2">Manage Leave Types</h1>
-                            <p className="text-slate-600">
-                                Create, update, and manage leave types with maximum days allocation
-                            </p>
+
+                        <div className="flex items-start justify-between mb-8">
+                            <div>
+                                <h1 className="text-4xl font-black text-slate-900 mb-2">Manage Leave Types</h1>
+                                <p className="text-slate-600">
+                                    Create, update, and manage leave types with maximum days allocation
+                                </p>
+                            </div>
+                            {!showForm && (
+                                <button
+                                    onClick={() => setShowForm(true)}
+                                    className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-lg"
+                                >
+                                    <span className="flex items-center gap-2">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                        </svg>
+                                        Add Leave Type
+                                    </span>
+                                </button>
+                            )}
                         </div>
-                        {!showForm && (
-                            <button
-                                onClick={() => setShowForm(true)}
-                                className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-lg"
-                            >
-                                <span className="flex items-center gap-2">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                    </svg>
-                                    Add Leave Type
-                                </span>
-                            </button>
-                        )}
-                    </div>
                     </div>
 
-                    {/* Form Section */}
+                    {/* ── Form ── */}
                     {showForm && (
                         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 mb-8">
                             <h2 className="text-2xl font-bold text-slate-900 mb-6">
@@ -192,6 +287,7 @@ export default function AdminManageLeaves() {
 
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
                                     {/* Leave Type Name */}
                                     <div>
                                         <label className="block text-sm font-semibold text-slate-700 mb-2">
@@ -223,34 +319,6 @@ export default function AdminManageLeaves() {
                                         />
                                     </div>
 
-                                    {/* Allowed Month */}
-                                    <div>
-                                        <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                            Allowed Month (Optional)
-                                        </label>
-                                        <select
-                                        name='allowed_month'
-                                        value={formData.allowed_month || ''}
-                                        onChange={handleInputChange}
-                                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                        >
-                                            <option value=""> Year-round (No restriction)</option>
-                                            <option value="1">January</option>
-                                            <option value="2">February</option>
-                                            <option value="3">March</option>
-                                            <option value="4">April</option>
-                                            <option value="5">May</option>
-                                            <option value="6">June</option>
-                                            <option value="7">July</option>
-                                            <option value="8">August</option>
-                                            <option value="9">September</option>
-                                            <option value="10">October</option>
-                                            <option value="11">November</option>
-                                            <option value="12">December</option>
-
-                                        </select>
-                                        </div>
-
                                     {/* Active Status Toggle */}
                                     <div>
                                         <label className="block text-sm font-semibold text-slate-700 mb-2">
@@ -279,8 +347,18 @@ export default function AdminManageLeaves() {
                                     </div>
                                 </div>
 
+                                {/* ── Multi-Month Picker (full width) ── */}
+                                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                                    <MonthPicker
+                                        selected={formData.allowed_months}
+                                        onChange={(months) =>
+                                            setFormData(prev => ({ ...prev, allowed_months: months }))
+                                        }
+                                    />
+                                </div>
+
                                 {/* Form Buttons */}
-                                <div className="flex gap-4 pt-4">
+                                <div className="flex gap-4 pt-2">
                                     <button
                                         type="submit"
                                         disabled={isFormLoading}
@@ -310,29 +388,13 @@ export default function AdminManageLeaves() {
                         </div>
                     )}
 
-                    {/* Leave Types List */}
+                    {/* ── Leave Types List ── */}
                     {isLoading ? (
                         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-12">
                             <div className="flex items-center justify-center gap-3">
-                                <svg
-                                    className="animate-spin h-6 w-6 text-slate-900"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <circle
-                                        className="opacity-25"
-                                        cx="12"
-                                        cy="12"
-                                        r="10"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                    ></circle>
-                                    <path
-                                        className="opacity-75"
-                                        fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                    ></path>
+                                <svg className="animate-spin h-6 w-6 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
                                 <p className="text-slate-600 font-medium">Loading leave types...</p>
                             </div>
@@ -340,18 +402,8 @@ export default function AdminManageLeaves() {
                     ) : leaveTypes.length === 0 ? (
                         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-12">
                             <div className="text-center">
-                                <svg
-                                    className="w-16 h-16 text-slate-300 mx-auto mb-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M7 16V4m0 0L3 8m0 0l4 4m10-4v12m0 0l4-4m0 0l-4-4"
-                                    />
+                                <svg className="w-16 h-16 text-slate-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m0 0l4 4m10-4v12m0 0l4-4m0 0l-4-4" />
                                 </svg>
                                 <h3 className="text-xl font-bold text-slate-900 mb-2">No Leave Types</h3>
                                 <p className="text-slate-600">Create your first leave type to get started</p>
@@ -372,9 +424,17 @@ export default function AdminManageLeaves() {
                                     {/* Card Body */}
                                     <div className="p-4">
                                         <div className="mb-4">
-                                            <div className="flex items-baseline gap-2 mb-2">
+                                            <div className="flex items-baseline gap-2 mb-3">
                                                 <p className="text-3xl font-bold text-blue-600">{leaveType.max_days}</p>
                                                 <p className="text-slate-600 text-sm">days/year</p>
+                                            </div>
+
+                                            {/* Allowed Months */}
+                                            <div>
+                                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
+                                                    Availability
+                                                </p>
+                                                <AllowedMonthsBadges months={leaveType.allowed_months} />
                                             </div>
                                         </div>
 
@@ -399,7 +459,11 @@ export default function AdminManageLeaves() {
                                                 title={leaveType.is_active ? 'Click to deactivate' : 'Click to activate'}
                                             >
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={leaveType.is_active ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : "M10 14l-2-2m0 0l-2-2m2 2l2-2m-2 2l-2 2m10-2a9 9 0 11-18 0 9 9 0 0118 0z"} />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                                        d={leaveType.is_active
+                                                            ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                            : "M10 14l-2-2m0 0l-2-2m2 2l2-2m-2 2l-2 2m10-2a9 9 0 11-18 0 9 9 0 0118 0z"}
+                                                    />
                                                 </svg>
                                                 {leaveType.is_active ? 'Active' : 'Inactive'}
                                             </button>
