@@ -31,27 +31,14 @@ export default function AdminApplications() {
     return typeMap[leaveType] || leaveType || 'Leave';
   };
 
-  // Calculate days between two dates (inclusive)
+  // Calculate days between two dates (inclusive), matching backend behaviour
+  // which counts all calendar days (weekends included).
   const calculateDaysDifference = (startDate, endDate) => {
     if (!startDate || !endDate) return 0;
     const start = new Date(startDate);
     const end = new Date(endDate);
-
-    let weekdayCount = 0;
-    const currentDate = new Date(start);
-
-    // Loop through each day from start to end date (inclusive)
-    while (currentDate <= end) {
-      const dayOfWeek = currentDate.getDay();
-      // 0 = Sunday, 6 = Saturday; exclude both
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-        weekdayCount++;
-      }
-      // Move to next day
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    return Math.max(0, weekdayCount);
+    const diff = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    return Math.max(0, diff);
   };
 
   const fetchPendingApplications = useCallback(async () => {

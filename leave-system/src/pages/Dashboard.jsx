@@ -69,23 +69,22 @@ export default function Dashboard() {
                         start.setHours(0, 0, 0, 0);
                         end.setHours(0, 0, 0, 0);
 
-                        let current = new Date(start);
+                        // Use backend-provided leave_duration for completed leaves.
+                        // For ongoing leaves, count elapsed calendar days (no weekend
+                        // exclusion) so the frontend stays consistent with the backend.
                         let duration = 0;
-                        
-                        // Loop continues ONLY IF we haven't passed the leave's end date 
-                        // AND we haven't passed today's date
-                        while (current <= end && current <= today) {
-                            const dayOfWeek = current.getDay();
-                            
-                            // 0 is Sunday, 6 is Saturday. Only count weekdays.
-                            if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                        if (today >= end) {
+                            // Leave is fully in the past — use the backend value directly
+                            duration = leave.leave_duration || 0;
+                        } else {
+                            // Leave is ongoing — count calendar days elapsed so far
+                            let current = new Date(start);
+                            while (current <= end && current <= today) {
                                 duration++;
+                                current.setDate(current.getDate() + 1);
                             }
-                            
-                            // Move forward by 1 day
-                            current.setDate(current.getDate() + 1);
                         }
-                        
+
                         summaryMap[leave.leave_type].used_days += duration;
                     }
                 });

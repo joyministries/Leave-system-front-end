@@ -11,23 +11,15 @@ export default function ApprovedLeaveCard({ leave }) {
   const end = new Date(leave.end_date);
   end.setHours(0, 0, 0, 0);
 
-  // 2. Calculate Total Duration & Elapsed Duration (Skipping Weekends)
-  let totalDuration = 0;
+  // 2. Use backend-provided duration. Elapsed is calculated in calendar days
+  //    (no weekend exclusion) to match the backend's own counting.
+  const totalDuration = leave.leave_duration || 0;
+
   let elapsedDuration = 0;
-  
   let currentDurationDate = new Date(start);
-  
   while (currentDurationDate <= end) {
-    const dayOfWeek = currentDurationDate.getDay();
-    
-    // If it's a weekday (not Sunday 0, not Saturday 6)
-    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-      totalDuration++;
-      
-      // If this day has already passed or is today, count it as elapsed
-      if (currentDurationDate <= today) {
-        elapsedDuration++;
-      }
+    if (currentDurationDate <= today) {
+      elapsedDuration++;
     }
     currentDurationDate.setDate(currentDurationDate.getDate() + 1);
   }

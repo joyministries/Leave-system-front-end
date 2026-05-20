@@ -169,14 +169,6 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
       return;
     }
 
-    // Validate start date is not in the past
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Set to start of day for comparison
-    const selectedStartDate = new Date(formData.startDate);
-    if (selectedStartDate < today) {
-      showError('Start date cannot be in the past. Please select today or a future date.');
-      return;
-    }
 
     const leaveTypeName = formData.leaveTypeName || '';
 
@@ -187,19 +179,27 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
     }
 
     // Check dynamic allowed_months rule (multi-month support)
+    // Employees may apply in advance — the selected START and END dates must
+    // fall within the allowed months, regardless of what month today is.
     if (formData.allowedMonths && formData.allowedMonths.length > 0) {
       const startMonth = new Date(formData.startDate).getMonth() + 1;
       const endMonth   = new Date(formData.endDate).getMonth() + 1;
 
-      if (
-        !formData.allowedMonths.includes(startMonth) ||
-        !formData.allowedMonths.includes(endMonth)
-      ) {
-        const monthNames = formData.allowedMonths
-          .map(m => new Date(2000, m - 1, 1).toLocaleString('default', { month: 'long' }))
-          .join(', ');
+      const monthNames = formData.allowedMonths
+        .map(m => new Date(2000, m - 1, 1).toLocaleString('default', { month: 'long' }))
+        .join(', ');
+
+      if (!formData.allowedMonths.includes(startMonth)) {
         showError(
-          `${formData.leaveTypeName} can only be taken in the following month(s): ${monthNames}.`
+          `The start date must fall in one of the allowed month(s) for ${formData.leaveTypeName}: ${monthNames}. ` +
+          `You can apply now but please choose a start date in ${monthNames}.`
+        );
+        return;
+      }
+
+      if (!formData.allowedMonths.includes(endMonth)) {
+        showError(
+          `The end date must also fall within the allowed month(s) for ${formData.leaveTypeName}: ${monthNames}.`
         );
         return;
       }
@@ -379,14 +379,25 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
                 {selectedTypeMaxDays && (
                   <div className="text-xs text-slate-600 mt-2 space-y-1">
                     <p>Yearly allocation: <span className="font-semibold">{selectedTypeMaxDays} days</span></p>
-                    {formData.allowedMonths && formData.allowedMonths.length > 0 && (
-                      <p className="text-amber-700 font-medium">
-                        📅 Only available in:{' '}
-                        {formData.allowedMonths
-                          .map(m => new Date(2000, m - 1, 1).toLocaleString('default', { month: 'long' }))
-                          .join(', ')}
-                      </p>
-                    )}
+                    {formData.allowedMonths && formData.allowedMonths.length > 0 && (() => {
+                      const monthNames = formData.allowedMonths
+                        .map(m => new Date(2000, m - 1, 1).toLocaleString('default', { month: 'long' }))
+                        .join(', ');
+                      const currentMonth = new Date().getMonth() + 1;
+                      const isCurrentMonthAllowed = formData.allowedMonths.includes(currentMonth);
+                      return (
+                        <div className="mt-1 space-y-0.5">
+                          <p className="text-amber-700 font-medium">
+                            📅 Leave dates must fall in: <span className="font-semibold">{monthNames}</span>
+                          </p>
+                          {!isCurrentMonthAllowed && (
+                            <p className="text-blue-600 text-xs">
+                              💡 You can apply now — just select a start date in {monthNames}.
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
@@ -399,7 +410,7 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
                     name="startDate"
                     value={formData.startDate}
                     onChange={handleChange}
-                    min={getTodayDate()}
+
                     className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm sm:text-base"
                     required
                   />
@@ -411,7 +422,7 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
                     name="endDate"
                     value={formData.endDate}
                     onChange={handleChange}
-                    min={getTodayDate()}
+
                     className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm sm:text-base"
                     required
                   />
