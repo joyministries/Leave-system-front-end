@@ -299,41 +299,29 @@ export default function AdminAllLeaves() {
         <div className="max-w-7xl mx-auto">
 
           {/* Header */}
-          <div className="mb-8">
-            <button
-              onClick={() => navigate('/admin/dashboard')}
-              className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-4 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back to Dashboard
-            </button>
+          <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-4xl font-black text-slate-900 mb-1">All Leave Requests</h1>
+              <p className="text-slate-500 text-sm">
+                Showing records for <span className="font-semibold text-slate-700">{viewLabel}</span>
+                {status && <> &mdash; status: <span className="font-semibold text-slate-700">{status}</span></>}
+              </p>
+            </div>
 
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <h1 className="text-4xl font-black text-slate-900 mb-1">All Leave Requests</h1>
-                <p className="text-slate-500 text-sm">
-                  Showing records for <span className="font-semibold text-slate-700">{viewLabel}</span>
-                  {status && <> &mdash; status: <span className="font-semibold text-slate-700">{status}</span></>}
-                </p>
-              </div>
-
-              {/* Summary chips */}
-              <div className="flex gap-2 flex-wrap">
-                {['PENDING', 'APPROVED', 'REJECTED'].map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setStatus(prev => prev === s ? '' : s)}
-                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${status === s
-                        ? STATUS_STYLES[s] + ' ring-2 ring-offset-1 ring-slate-400'
-                        : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
-                      }`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
+            {/* Summary chips */}
+            <div className="flex gap-2 flex-wrap">
+              {['PENDING', 'APPROVED', 'REJECTED'].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setStatus(prev => prev === s ? '' : s)}
+                  className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${status === s
+                      ? STATUS_STYLES[s] + ' ring-2 ring-offset-1 ring-slate-400'
+                      : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
+                    }`}
+                >
+                  {s}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -371,7 +359,7 @@ export default function AdminAllLeaves() {
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200">
-                        {['Employee', 'Leave Type', 'From', 'To', 'Days', 'Status', 'Document'].map((h) => (
+                        {['Employee', 'Leave Type', 'Date Applied', 'From', 'To', 'Days', 'Status', 'Document'].map((h) => (
                           <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
                             {h}
                           </th>
@@ -396,6 +384,11 @@ export default function AdminAllLeaves() {
                             {/* Leave Type */}
                             <td className="px-4 py-3 text-sm font-medium text-slate-800 whitespace-nowrap">
                               {leave.leave_type_name || leave.leave_type || '—'}
+                            </td>
+
+                            {/* Date Applied */}
+                            <td className="px-4 py-3 text-sm text-slate-600 whitespace-nowrap">
+                              {fmt(leave.created_at)}
                             </td>
 
                             {/* From */}

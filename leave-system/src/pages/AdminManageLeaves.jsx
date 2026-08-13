@@ -221,7 +221,7 @@ export default function AdminManageLeaves() {
                 await fetchLeaveTypes();
             } catch (error) {
                 console.error('Error deleting leave type:', error);
-                showError('Failed to delete leave type. Please try again.');
+                showError(error.message || 'Failed to delete leave type. Please try again.');
             }
         }
     };
@@ -233,7 +233,7 @@ export default function AdminManageLeaves() {
             await fetchLeaveTypes();
         } catch (error) {
             console.error('Error toggling leave type status:', error);
-            showError('Failed to update leave type status. Please try again.');
+            showError(error.message || 'Failed to update leave type status. Please try again.');
         }
     };
 
@@ -245,16 +245,6 @@ export default function AdminManageLeaves() {
 
                     {/* Header */}
                     <div className="mb-8">
-                        <button
-                            onClick={() => navigate('/admin/dashboard')}
-                            className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-4 transition-colors"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                            </svg>
-                            Back to Dashboard
-                        </button>
-
                         <div className="flex items-start justify-between mb-8">
                             <div>
                                 <h1 className="text-4xl font-black text-slate-900 mb-2">Manage Leave Types</h1>

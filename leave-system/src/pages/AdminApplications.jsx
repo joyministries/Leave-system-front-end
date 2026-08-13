@@ -1,8 +1,58 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAlert } from '../hooks/alerthook';
 import { getPendingLeaves, getLeaveType, updateLeaveStatus, downloadLeaveDocument } from '../services/ApiClient';
 import ProtectedLayout from '../components/ProtectedLayout';
+import { FiMoreVertical, FiCheck, FiX } from 'react-icons/fi';
+
+// ─── Kebab (3-dot) Action Menu ───────────────────────────────────────────────
+
+function ActionMenu({ app, onApprove, onReject }) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div className="relative flex justify-center" ref={menuRef}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition focus:outline-none"
+        title="Actions"
+      >
+        <FiMoreVertical className="text-lg" />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-9 w-40 bg-white rounded-xl shadow-xl border border-slate-100 z-20 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+          <button
+            onClick={() => { setOpen(false); onApprove(app); }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 transition"
+          >
+            <FiCheck className="text-base shrink-0" />
+            Approve
+          </button>
+          <div className="mx-3 border-t border-slate-100" />
+          <button
+            onClick={() => { setOpen(false); onReject(app); }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-semibold text-rose-700 hover:bg-rose-50 transition"
+          >
+            <FiX className="text-base shrink-0" />
+            Reject
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminApplications() {
   const location = useLocation();
@@ -79,7 +129,8 @@ export default function AdminApplications() {
           reason: item.reason || 'No reason provided',
           extra_unpaid_days: item.extra_unpaid_days || 0,
           leave_duration: item.leave_duration || 0,
-          supporting_document: item.supporting_document || null
+          supporting_document: item.supporting_document || null,
+          appliedDate: item.created_at ? new Date(item.created_at).toLocaleDateString() : 'N/A'
         };
       });
 
@@ -97,7 +148,7 @@ export default function AdminApplications() {
   }, [fetchPendingApplications]);
 
 
-  // 2. Open Review Dialog
+  // Open Review Dialog
   const openReviewModal = (app, type) => {
     setReviewModal({
       isOpen: true,
@@ -186,15 +237,6 @@ export default function AdminApplications() {
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <button
-              onClick={() => navigate('/admin/dashboard')}
-              className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-4 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back to Dashboard
-            </button>
             <h1 className="text-4xl font-black text-slate-900 mb-2">Leave Applications</h1>
             <p className="text-slate-600">Review and process employee leave requests</p>
           </div>
@@ -212,6 +254,7 @@ export default function AdminApplications() {
                   <thead>
                     <tr className="bg-slate-100 border-b border-slate-200">
                       <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Employee</th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Applied Date</th>
                       <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Institution</th>
                       <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Department</th>
                       <th className="px-6 py-4 text-left text-sm font-bold text-slate-900">Leave Type</th>
@@ -226,6 +269,7 @@ export default function AdminApplications() {
                         <td className="px-6 py-4">
                           <p className="font-bold text-slate-900">{app.employeeName}</p>
                         </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-slate-700">{app.appliedDate}</td>
                         <td className="px-6 py-4 text-sm font-semibold text-slate-700">{app.employeeInstitution}</td>
                         <td className="px-6 py-4 text-sm text-slate-700">{app.employeeDepartment}</td>
                         <td className="px-6 py-4 text-sm text-slate-700">
@@ -248,21 +292,13 @@ export default function AdminApplications() {
                             <span className="text-slate-400 text-xs">No document</span>
                           )}
                         </td>
+                        {/* ── 3-dot Kebab Menu ── */}
                         <td className="px-6 py-4">
-                          <div className="flex gap-2 justify-center">
-                            <button
-                              onClick={() => openReviewModal(app, 'APPROVED')}
-                              className="px-3 py-1.5 bg-green-100 hover:bg-green-200 text-green-800 text-xs font-bold uppercase tracking-wider rounded transition"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => openReviewModal(app, 'REJECTED')}
-                              className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-800 text-xs font-bold uppercase tracking-wider rounded transition"
-                            >
-                              Reject
-                            </button>
-                          </div>
+                          <ActionMenu
+                            app={app}
+                            onApprove={(a) => openReviewModal(a, 'APPROVED')}
+                            onReject={(a) => openReviewModal(a, 'REJECTED')}
+                          />
                         </td>
                       </tr>
                     ))}

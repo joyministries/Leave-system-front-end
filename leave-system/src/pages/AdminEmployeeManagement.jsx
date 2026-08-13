@@ -76,7 +76,7 @@ export default function AdminEmployeeManagement() {
             setEditingEmployee(null);
         } catch (error) {
             console.error('Error updating employee:', error);
-            showError('Failed to update employee. Please try again.');
+            showError(error.message || 'Failed to update employee. Please try again.');
         }
     };
 
@@ -139,7 +139,7 @@ export default function AdminEmployeeManagement() {
                 await fetchEmployees(currentPage);
             } catch (error) {
                 console.error('Error deactivating employee:', error);
-                showError('Failed to deactivate employee. Please try again.');
+                showError(error.message || 'Failed to deactivate employee. Please try again.');
             }
         }
     };
@@ -156,7 +156,7 @@ export default function AdminEmployeeManagement() {
             await fetchEmployees(currentPage);
         } catch (error) {
             console.error('Error toggling employee active status:', error);
-            showError('Failed to update employee status. Please try again.');
+            showError(error.message || 'Failed to update employee status. Please try again.');
         }
     };
 
@@ -179,8 +179,7 @@ export default function AdminEmployeeManagement() {
             showSuccess('Invite email resent successfully!');
         } catch (error) {
             console.error('Error resending invite email:', error);
-            const detailMsg = error.response?.data?.error || error.response?.data?.detail || error.message;
-            showError(detailMsg ? `Failed: ${detailMsg.substring(0, 100)}` : 'Failed to resend invite email. Please try again.');
+            showError(error.message || 'Failed to resend invite email. Please try again.');
         }
     };
 
@@ -200,15 +199,6 @@ export default function AdminEmployeeManagement() {
                 <div className="max-w-7xl mx-auto">
                     {/* Header */}
                     <div className="mb-8">
-                        <button
-                            onClick={() => navigate('/admin/dashboard')}
-                            className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-4 transition-colors"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                            </svg>
-                            Back to Dashboard
-                        </button>
                         <h1 className="text-4xl font-black text-slate-900 mb-2">Employee Management</h1>
                         <p className="text-slate-600">
                             View and manage all employees in the system

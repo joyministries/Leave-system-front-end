@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://leave-system-backend-9ofz.onrender.com/api/';
+const API_BASE_URL = 'http://127.0.0.1:8000/api/';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -83,6 +83,81 @@ apiClient.interceptors.response.use(
 );
 
 // =========================================================
+// ERROR EXTRACTION UTILITIES
+// =========================================================
+
+/**
+ * Format API response errors into explicit, human-readable error messages.
+ * Handles DRF field dictionaries, detail messages, error objects, arrays, and standard Error objects.
+ */
+export const formatApiError = (error, defaultFallback = 'An unexpected error occurred. Please try again.') => {
+  if (!error) return defaultFallback;
+
+  const data = error.response?.data || error.cause?.response?.data || error.data;
+
+  if (data) {
+    if (typeof data === 'string') {
+      if (data.trim().startsWith('<html') || data.trim().startsWith('<!DOCTYPE')) {
+        return defaultFallback;
+      }
+      return data;
+    }
+
+    if (typeof data === 'object' && data !== null) {
+      if (typeof data.detail === 'string' && data.detail) return data.detail;
+      if (typeof data.message === 'string' && data.message) return data.message;
+      if (typeof data.error === 'string' && data.error) return data.error;
+
+      if (Array.isArray(data.non_field_errors) && data.non_field_errors.length > 0) {
+        return data.non_field_errors.join(' ');
+      }
+
+      const fieldErrors = [];
+      for (const [field, messages] of Object.entries(data)) {
+        if (field === 'status_code' || field === 'code') continue;
+        const fieldName = field.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+        if (Array.isArray(messages)) {
+          fieldErrors.push(`${fieldName}: ${messages.join(', ')}`);
+        } else if (typeof messages === 'string') {
+          fieldErrors.push(`${fieldName}: ${messages}`);
+        } else if (typeof messages === 'object' && messages !== null) {
+          fieldErrors.push(`${fieldName}: ${JSON.stringify(messages)}`);
+        }
+      }
+
+      if (fieldErrors.length > 0) {
+        return fieldErrors.join(' | ');
+      }
+    }
+  }
+
+  if (
+    typeof error.message === 'string' &&
+    error.message &&
+    !error.message.includes('Request failed with status code') &&
+    !error.message.includes('Network Error') &&
+    error.message !== 'Failed to fetch' &&
+    error.message !== defaultFallback
+  ) {
+    return error.message;
+  }
+
+  return defaultFallback;
+};
+
+/**
+ * Standardized API error handler that formats explicit error messages and retains full response details
+ */
+export const handleApiError = (error, defaultMessage) => {
+  const extractedMessage = formatApiError(error, defaultMessage);
+  const err = new Error(extractedMessage);
+  err.response = error.response;
+  err.status = error.response?.status;
+  err.data = error.response?.data;
+  throw err;
+};
+
+// =========================================================
 // AUTHENTICATION ENDPOINTS
 // =========================================================
 
@@ -95,7 +170,7 @@ export const login = async (email, password) => {
     const response = await apiClient.post('/auth/login/', { email, password });
     return response;
   } catch (error) {
-    throw new Error('Login failed. Please check your credentials', { cause: error.message });
+    handleApiError(error, 'Login failed. Please check your credentials');
   }
 };
 
@@ -108,7 +183,7 @@ export const logout = async () => {
     const response = await apiClient.post('/auth/logout/');
     return response;
   } catch (error) {
-    throw new Error('Logout failed', { cause: error.message });
+    handleApiError(error, 'Logout failed');
   }
 };
 
@@ -121,7 +196,7 @@ export const getCurrentUser = async () => {
     const response = await apiClient.get('/auth/me/');
     return response;
   } catch (error) {
-    throw new Error('Failed to fetch user profile', { cause: error.message });
+    handleApiError(error, 'Failed to fetch user profile');
   }
 };
 
@@ -135,7 +210,7 @@ export const passwordResetRequest = async (email) => {
     const response = await apiClient.post('/auth/password-reset/', { email });
     return response;
   } catch (error) {
-    throw new Error('Failed to send password reset email', { cause: error.message });
+    handleApiError(error, 'Failed to send password reset email');
   }
 };
 
@@ -151,15 +226,18 @@ export const passwordResetRequest = async (email) => {
  */
 export const employeeSetPassword = async (uid, token, newPassword, confirmPassword) => {
   try {
+    const cleanUid = uid ? uid.toString().trim().replace(/\/$/, '') : '';
+    const cleanToken = token ? token.toString().trim().replace(/\/$/, '') : '';
+
     const response = await apiClient.post('/auth/set-password/', {
-      uid: uid,
-      token: token,
+      uid: cleanUid,
+      token: cleanToken,
       new_password: newPassword,
       confirm_password: confirmPassword
     });
     return response;
   } catch (error) {
-    throw new Error('Failed to set password', { cause: error.message });
+    handleApiError(error, 'Failed to set password');
   }
 };
 
@@ -171,7 +249,7 @@ export const setPasswordForLoggedInUser = async (newPassword, confirmPassword) =
     });
     return response;
   } catch (error) {
-    throw new Error('Failed to set password', { cause: error.message });
+    handleApiError(error, 'Failed to set password');
   }
 };
 
@@ -185,7 +263,7 @@ export const refreshToken = async (refreshToken) => {
     const response = await apiClient.post('/auth/token/refresh/', { refresh: refreshToken });
     return response;
   } catch (error) {
-    throw new Error('Failed to refresh token', { cause: error.message });
+    handleApiError(error, 'Failed to refresh token');
   }
 };
 
@@ -203,7 +281,7 @@ export const listLeaves = async (searchParams = {}) => {
     const response = await apiClient.get('/leaves/', { params: searchParams });
     return response;
   } catch (error) {
-    throw new Error('Failed to fetch leaves', { cause: error.message });
+    handleApiError(error, 'Failed to fetch leaves');
   }
 };
 
@@ -240,16 +318,7 @@ export const applyLeave = async (leaveData) => {
       return response;
     }
   } catch (error) {
-    console.error('Leave application error response:', error.response?.data);
-    console.error('Leave application error status:', error.response?.status);
-    console.error('Leave application error headers:', error.response?.headers);
-    console.error('Request config:', error.config);
-    console.error('Full error details:', error);
-
-    // Pass the server error response forward so the modal can extract and display it
-    const newError = new Error('Failed to apply for leave');
-    newError.response = error.response;
-    throw newError;
+    handleApiError(error, 'Failed to apply for leave');
   }
 };
 
@@ -262,7 +331,7 @@ export const getLeave = async (leaveId) => {
     const response = await apiClient.get(`/leaves/${leaveId}/`);
     return response;
   } catch (error) {
-    throw new Error('Failed to fetch leave details', { cause: error.message });
+    handleApiError(error, 'Failed to fetch leave details');
   }
 };
 
@@ -275,7 +344,7 @@ export const updateLeave = async (leaveId, leaveData) => {
     const response = await apiClient.put(`/leaves/${leaveId}/`, leaveData);
     return response;
   } catch (error) {
-    throw new Error('Failed to update leave', { cause: error.message });
+    handleApiError(error, 'Failed to update leave');
   }
 };
 
@@ -288,7 +357,7 @@ export const partialUpdateLeave = async (leaveId, leaveData) => {
     const response = await apiClient.patch(`/leaves/${leaveId}/`, leaveData);
     return response;
   } catch (error) {
-    throw new Error('Failed to update leave', { cause: error.message });
+    handleApiError(error, 'Failed to update leave');
   }
 };
 
@@ -301,7 +370,7 @@ export const cancelLeave = async (leaveId) => {
     const response = await apiClient.delete(`/leaves/${leaveId}/`);
     return response;
   } catch (error) {
-    throw new Error('Failed to cancel leave', { cause: error.message });
+    handleApiError(error, 'Failed to cancel leave');
   }
 };
 
@@ -314,7 +383,7 @@ export const cancelOwnLeave = async (leaveId) => {
     const response = await apiClient.patch(`/leaves/${leaveId}/cancel/`);
     return response;
   } catch (error) {
-    throw new Error('Failed to cancel leave', { cause: error.message });
+    handleApiError(error, 'Failed to cancel leave');
   }
 };
 
@@ -325,7 +394,7 @@ export const updateLeaveStatus = async (leaveId, payload) => {
     const response = await apiClient.post(`/leaves/${leaveId}/update_status/`, payload);
     return response;
   } catch (error) {
-    throw new Error('Failed to update leave status', { cause: error.message });
+    handleApiError(error, 'Failed to update leave status');
   }
 }
 
@@ -339,7 +408,7 @@ export const getPendingLeaves = async () => {
     const response = await apiClient.get('/leaves/pending_leaves/');
     return response;
   } catch (error) {
-    throw new Error('Failed to fetch pending leaves', { cause: error.message });
+    handleApiError(error, 'Failed to fetch pending leaves');
   }
 };
 
@@ -352,7 +421,7 @@ export const getMyLeaves = async () => {
     const response = await apiClient.get('/leaves/by_employee/');
     return response;
   } catch (error) {
-    throw new Error('Failed to fetch leave history', { cause: error.message });
+    handleApiError(error, 'Failed to fetch leave history');
   }
 };
 
@@ -369,7 +438,7 @@ export const downloadLeaveDocument = async (leaveId) => {
     });
     return response;
   } catch (error) {
-    throw new Error('Failed to download leave document', { cause: error.message });
+    handleApiError(error, 'Failed to download leave document');
   }
 };
 
@@ -393,9 +462,7 @@ export const uploadLeaveDocument = async (leaveId, file) => {
     });
     return response;
   } catch (error) {
-    const newError = new Error('Failed to upload leave document');
-    newError.response = error.response;
-    throw newError;
+    handleApiError(error, 'Failed to upload leave document');
   }
 };
 
@@ -414,7 +481,7 @@ export const getLeaveTypes = async (searchParams = {}) => {
     const response = await apiClient.get('/leave-types/', { params: searchParams });
     return response.data.results;
   } catch (error) {
-    throw new Error('Failed to fetch leave types', { cause: error.message });
+    handleApiError(error, 'Failed to fetch leave types');
   }
 };
 
@@ -433,7 +500,7 @@ export const createLeaveType = async (leaveTypeData) => {
     const response = await apiClient.post('/leave-types/', payload);
     return response;
   } catch (error) {
-    throw new Error('Failed to create leave type', { cause: error.message });
+    handleApiError(error, 'Failed to create leave type');
   }
 };
 
@@ -446,7 +513,7 @@ export const getLeaveType = async (leaveTypeId) => {
     const response = await apiClient.get(`/leave-types/${leaveTypeId}/`);
     return response;
   } catch (error) {
-    throw new Error('Failed to fetch leave type', { cause: error.message });
+    handleApiError(error, 'Failed to fetch leave type');
   }
 };
 
@@ -459,7 +526,7 @@ export const updateLeaveType = async (leaveTypeId, leaveTypeData) => {
     const response = await apiClient.put(`/leave-types/${leaveTypeId}/`, leaveTypeData);
     return response;
   } catch (error) {
-    throw new Error('Failed to update leave type', { cause: error.message });
+    handleApiError(error, 'Failed to update leave type');
   }
 };
 
@@ -472,7 +539,7 @@ export const partialUpdateLeaveType = async (leaveTypeId, leaveTypeData) => {
     const response = await apiClient.patch(`/leave-types/${leaveTypeId}/`, leaveTypeData);
     return response;
   } catch (error) {
-    throw new Error('Failed to update leave type', { cause: error.message });
+    handleApiError(error, 'Failed to update leave type');
   }
 };
 
@@ -486,7 +553,7 @@ export const deleteLeaveType = async (leaveTypeId) => {
     const response = await apiClient.delete(`/leave-types/${leaveTypeId}/`);
     return response;
   } catch (error) {
-    throw new Error('Failed to delete leave type', { cause: error.message });
+    handleApiError(error, 'Failed to delete leave type');
   }
 };
 
@@ -499,7 +566,7 @@ export const toggleLeaveTypeActive = async (leaveTypeId) => {
     const response = await apiClient.patch(`/leave-types/${leaveTypeId}/toggle_active/`);
     return response;
   } catch (error) {
-    throw new Error('Failed to toggle leave type status', { cause: error.message });
+    handleApiError(error, 'Failed to toggle leave type status');
   }
 };
 
@@ -517,7 +584,7 @@ export const getEmployees = async (searchParams = {}) => {
     const response = await apiClient.get('/employees/', { params: searchParams });
     return response;
   } catch (error) {
-    throw new Error('Failed to fetch employees', { cause: error.message });
+    handleApiError(error, 'Failed to fetch employees');
   }
 };
 
@@ -531,7 +598,7 @@ export const createEmployee = async (employeeData) => {
     const response = await apiClient.post('/employees/', employeeData);
     return response;
   } catch (error) {
-    throw new Error('Failed to create employee', { cause: error.message });
+    handleApiError(error, 'Failed to create employee');
   }
 };
 
@@ -544,7 +611,7 @@ export const getEmployee = async (employeeId) => {
     const response = await apiClient.get(`/employees/${employeeId}/`);
     return response;
   } catch (error) {
-    throw new Error('Failed to fetch employee', { cause: error.message });
+    handleApiError(error, 'Failed to fetch employee');
   }
 };
 
@@ -557,7 +624,7 @@ export const updateEmployee = async (employeeId, employeeData) => {
     const response = await apiClient.put(`/employees/${employeeId}/`, employeeData);
     return response;
   } catch (error) {
-    throw new Error('Failed to update employee', { cause: error.message });
+    handleApiError(error, 'Failed to update employee');
   }
 };
 
@@ -570,7 +637,7 @@ export const partialUpdateEmployee = async (employeeId, employeeData) => {
     const response = await apiClient.patch(`/employees/${employeeId}/`, employeeData);
     return response;
   } catch (error) {
-    throw new Error('Failed to update employee', { cause: error.message });
+    handleApiError(error, 'Failed to update employee');
   }
 };
 
@@ -584,7 +651,7 @@ export const deactivateEmployee = async (employeeId) => {
     const response = await apiClient.delete(`/employees/${employeeId}/`);
     return response;
   } catch (error) {
-    throw new Error('Failed to deactivate employee', { cause: error.message });
+    handleApiError(error, 'Failed to deactivate employee');
   }
 };
 
@@ -597,7 +664,7 @@ export const getEmployeeLeaves = async (employeeId) => {
     const response = await apiClient.get(`/employees/${employeeId}/leaves/`);
     return response;
   } catch (error) {
-    throw new Error('Failed to fetch employee leaves', { cause: error.message });
+    handleApiError(error, 'Failed to fetch employee leaves');
   }
 };
 
@@ -610,7 +677,7 @@ export const toggleEmployeeActive = async (employeeId) => {
     const response = await apiClient.patch(`/employees/${employeeId}/toggle_active/`);
     return response;
   } catch (error) {
-    throw new Error('Failed to toggle employee status', { cause: error.message });
+    handleApiError(error, 'Failed to toggle employee status');
   }
 };
 
@@ -623,10 +690,7 @@ export const resendInviteEmail = async (employeeId) => {
     const response = await apiClient.post(`/employees/${employeeId}/resend_invite/`);
     return response;
   } catch (error) {
-    const errorMsg = error.response?.data?.error || error.response?.data?.detail || error.message || 'Unknown error occurred';
-    const newError = new Error(`Failed to resend invite email: ${errorMsg}`);
-    newError.response = error.response;
-    throw newError;
+    handleApiError(error, 'Failed to resend invite email');
   }
 };
 
@@ -644,7 +708,7 @@ export const getInstitutions = async (searchParams = {}) => {
     const response = await apiClient.get('/institutions/', { params: searchParams });
     return response;
   } catch (error) {
-    throw new Error('Failed to fetch institutions', { cause: error.message });
+    handleApiError(error, 'Failed to fetch institutions');
   }
 };
 
@@ -658,7 +722,7 @@ export const createInstitution = async (institutionData) => {
     const response = await apiClient.post('/institutions/', institutionData);
     return response;
   } catch (error) {
-    throw new Error('Failed to create institution', { cause: error.message });
+    handleApiError(error, 'Failed to create institution');
   }
 };
 
@@ -671,7 +735,7 @@ export const getInstitution = async (institutionId) => {
     const response = await apiClient.get(`/institutions/${institutionId}/`);
     return response;
   } catch (error) {
-    throw new Error('Failed to fetch institution', { cause: error.message });
+    handleApiError(error, 'Failed to fetch institution');
   }
 };
 
@@ -684,7 +748,7 @@ export const updateInstitution = async (institutionId, institutionData) => {
     const response = await apiClient.put(`/institutions/${institutionId}/`, institutionData);
     return response;
   } catch (error) {
-    throw new Error('Failed to update institution', { cause: error.message });
+    handleApiError(error, 'Failed to update institution');
   }
 };
 
@@ -697,7 +761,7 @@ export const partialUpdateInstitution = async (institutionId, institutionData) =
     const response = await apiClient.patch(`/institutions/${institutionId}/`, institutionData);
     return response;
   } catch (error) {
-    throw new Error('Failed to update institution', { cause: error.message });
+    handleApiError(error, 'Failed to update institution');
   }
 };
 
@@ -711,7 +775,7 @@ export const deleteInstitution = async (institutionId) => {
     const response = await apiClient.delete(`/institutions/${institutionId}/`);
     return response;
   } catch (error) {
-    throw new Error('Failed to delete institution', { cause: error.message });
+    handleApiError(error, 'Failed to delete institution');
   }
 };
 
@@ -724,7 +788,7 @@ export const getInstitutionEmployees = async (institutionId) => {
     const response = await apiClient.get(`/institutions/${institutionId}/employees/`);
     return response;
   } catch (error) {
-    throw new Error('Failed to fetch institution employees', { cause: error.message });
+    handleApiError(error, 'Failed to fetch institution employees');
   }
 };
 
@@ -737,7 +801,7 @@ export const getInstitutionEmployeeCount = async (institutionId) => {
     const response = await apiClient.get(`/institutions/${institutionId}/employee_count/`);
     return response;
   } catch (error) {
-    throw new Error('Failed to fetch employee count', { cause: error.message });
+    handleApiError(error, 'Failed to fetch employee count');
   }
 };
 
@@ -750,7 +814,7 @@ export const toggleInstitutionActive = async (institutionId) => {
     const response = await apiClient.patch(`/institutions/${institutionId}/toggle_active/`);
     return response;
   } catch (error) {
-    throw new Error('Failed to toggle institution status', { cause: error.message });
+    handleApiError(error, 'Failed to toggle institution status');
   }
 };
 
@@ -763,7 +827,7 @@ export const getReports = async () => {
     const response = await apiClient.get('/leaves/reports/');
     return response;
   } catch (error) {
-    throw new Error('Failed to fetch reports', { cause: error.message });
+    handleApiError(error, 'Failed to fetch reports');
   }
 };
 
@@ -780,7 +844,7 @@ export const getDepartmentReports = async () => {
     const response = await apiClient.get('/leaves/department-reports/');
     return response;
   } catch (error) {
-    throw new Error('Failed to fetch department reports', { cause: error.message });
+    handleApiError(error, 'Failed to fetch department reports');
   }
 }
 
@@ -793,7 +857,7 @@ export const getMyLeaveSummary = async () => {
     const response = await apiClient.get('/leaves/my-summary/');
     return response;
   } catch (error) {
-    throw new Error('Failed to fetch leave summary', { cause: error.message });
+    handleApiError(error, 'Failed to fetch leave summary');
   }
 }
 
@@ -806,7 +870,64 @@ export const getEmployeeLeaveSummary = async (employeeId) => {
     const response = await apiClient.get(`/employees/${employeeId}/leave-summary/`);
     return response;
   } catch (error) {
-    throw new Error('Failed to fetch employee leave summary', { cause: error.message });
+    handleApiError(error, 'Failed to fetch employee leave summary');
   }
-}
+};
+
+// =========================================================
+// NOTIFICATION ENDPOINTS
+// =========================================================
+
+/**
+ * Get current user's notifications
+ * GET /notifications/
+ */
+export const getNotifications = async (params = {}) => {
+  try {
+    const response = await apiClient.get('/notifications/', { params });
+    return response;
+  } catch (error) {
+    handleApiError(error, 'Failed to fetch notifications');
+  }
+};
+
+/**
+ * Get count of unread notifications
+ * GET /notifications/unread_count/
+ */
+export const getUnreadNotificationCount = async () => {
+  try {
+    const response = await apiClient.get('/notifications/unread_count/');
+    return response;
+  } catch (error) {
+    handleApiError(error, 'Failed to fetch unread notification count');
+  }
+};
+
+/**
+ * Mark a single notification as read
+ * POST /notifications/:id/mark_read/
+ */
+export const markNotificationRead = async (notificationId) => {
+  try {
+    const response = await apiClient.post(`/notifications/${notificationId}/mark_read/`);
+    return response;
+  } catch (error) {
+    handleApiError(error, 'Failed to mark notification as read');
+  }
+};
+
+/**
+ * Mark all notifications as read
+ * POST /notifications/mark_all_read/
+ */
+export const markAllNotificationsRead = async () => {
+  try {
+    const response = await apiClient.post('/notifications/mark_all_read/');
+    return response;
+  } catch (error) {
+    handleApiError(error, 'Failed to mark all notifications as read');
+  }
+};
+
 

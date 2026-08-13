@@ -133,15 +133,6 @@ export default function LeaveCalendar() {
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-              <button
-                  onClick={() => navigate(user?.role?.toLowerCase() === 'admin' ? '/admin/dashboard' : '/dashboard')}
-                  className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-4 transition-colors"
-              >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Back to Dashboard
-              </button>
               <h1 className="text-4xl font-black text-slate-900 mb-2">{`${getUserDisplayName(user)}'s Leave Calendar`}</h1>
               <p className="text-slate-600">View your approved and pending leave dates</p>
           </div>

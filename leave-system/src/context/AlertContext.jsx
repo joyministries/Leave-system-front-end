@@ -1,20 +1,24 @@
 import { AlertContext } from "../hooks/alerthook";
 import { useState, useCallback, useMemo } from "react";
 import { AlertBanner } from "../components/AlertBanner";
+import { formatApiError } from "../services/ApiClient";
 
 // AlertProvider component
 export const AlertProvider = ({ children }) => {
     const [alert, setAlert] = useState(null);
 
     const showAlert = useCallback((message, type = 'info', duration = 5000) => {
-        setAlert({ message, type, duration });
+        const finalMessage = typeof message === 'string'
+            ? message
+            : formatApiError(message);
+        setAlert({ message: finalMessage, type, duration });
     }, []);
 
     const showSuccess = useCallback((message, duration = 5000) => {
         showAlert(message, 'success', duration);
     }, [showAlert]);
 
-    const showError = useCallback((message, duration = 5000) => {
+    const showError = useCallback((message, duration = 6000) => {
         showAlert(message, 'error', duration);
     }, [showAlert]);
 

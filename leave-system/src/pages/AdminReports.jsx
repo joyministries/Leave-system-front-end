@@ -237,15 +237,6 @@ const downloadPDFReport = () => {
         <div className="max-w-7xl mx-auto">
           
           <div className="mb-10">
-              <button
-                  onClick={() => navigate('/admin/dashboard')}
-                  className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-4 transition-colors"
-              >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Back to Dashboard
-              </button>
             <h1 className="text-4xl sm:text-5xl font-black text-slate-900 mb-3">Admin Reports</h1>
             <p className="text-slate-600 text-lg">System-wide analytics and individual employee tracking</p>
           </div>

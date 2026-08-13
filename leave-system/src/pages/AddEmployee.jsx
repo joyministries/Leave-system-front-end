@@ -105,42 +105,31 @@ export default function AddEmployee() {
 
     createEmployee(employeeData)
       .then(() => {
-            showSuccess( `Employee created successfully!`);
-          // Reset form
-          setFormData({
-            firstName: '',
-            lastName: '',
-            email: '',
-            phoneNumber: '',
-            department: '',
-            position: '',
-            role: '',
-            institution: '',
-          });
-          // Navigate back to admin dashboard after a short delay
-          setTimeout(() => {
-            navigate('/admin/dashboard');
-          }, 1500);
-        })
+        showSuccess('Employee created successfully!');
+        // Reset form on success
+        setFormData({
+          firstName: '',
+          lastName: '',
+          email: '',
+          phoneNumber: '',
+          department: '',
+          position: '',
+          role: '',
+          institution: '',
+        });
+        setFieldErrors({});
+        // Navigate back to admin dashboard after a short delay
+        setTimeout(() => {
+          navigate('/admin/dashboard');
+        }, 1500);
+      })
       .catch((error) => {
-        showError("An error occurred while creating the employee. Please check the form and try again.");
+        showError(error.message || 'An error occurred while creating the employee.');
         console.error('Error creating employee:', error);
-
       })
       .finally(() => {
         setIsLoading(false);
-        setFormData({
-            firstName: '',
-            lastName: '',
-            email: '',
-            phoneNumber: '',
-            department: '',
-            position: '',
-            role: '',
-            institution: ''
-          });
-         setFieldErrors({}); // Clear field errors on completion
-          });
+      });
   };
 
   const handleCancel = () => {
@@ -153,15 +142,6 @@ export default function AddEmployee() {
         <div className="max-w-2xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <button
-              onClick={handleCancel}
-              className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-4 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back to Dashboard
-            </button>
             <h1 className="text-4xl font-black text-slate-900 mb-2">Add New Employee</h1>
             <p className="text-slate-600">Create a new employee account and add them to your organization</p>
           </div>
