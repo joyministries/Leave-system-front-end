@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api/';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -479,7 +479,13 @@ export const uploadLeaveDocument = async (leaveId, file) => {
 export const getLeaveTypes = async (searchParams = {}) => {
   try {
     const response = await apiClient.get('/leave-types/', { params: searchParams });
-    return response.data.results;
+    if (Array.isArray(response.data?.results)) {
+      return response.data.results;
+    }
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    return [];
   } catch (error) {
     handleApiError(error, 'Failed to fetch leave types');
   }
@@ -567,6 +573,90 @@ export const toggleLeaveTypeActive = async (leaveTypeId) => {
     return response;
   } catch (error) {
     handleApiError(error, 'Failed to toggle leave type status');
+  }
+};
+
+// =========================================================
+// ROLE & PERMISSION ENDPOINTS
+// =========================================================
+
+/**
+ * List System Templates and Accessible Institution Roles
+ * GET /roles/
+ */
+export const getRoles = async (searchParams = {}) => {
+  try {
+    const response = await apiClient.get('/roles/', { params: searchParams });
+    return response;
+  } catch (error) {
+    handleApiError(error, 'Failed to fetch roles');
+  }
+};
+
+/**
+ * Create New Institution Custom Role
+ * POST /roles/
+ * Request payload: { name, data_scope, permission_codes, grants_django_admin }
+ */
+export const createRole = async (roleData) => {
+  try {
+    const response = await apiClient.post('/roles/', roleData);
+    return response;
+  } catch (error) {
+    handleApiError(error, 'Failed to create role');
+  }
+};
+
+/**
+ * Retrieve Specific Role Details
+ * GET /roles/<id>/
+ */
+export const getRole = async (roleId) => {
+  try {
+    const response = await apiClient.get(`/roles/${roleId}/`);
+    return response;
+  } catch (error) {
+    handleApiError(error, 'Failed to fetch role details');
+  }
+};
+
+/**
+ * Update Role (Full or Partial)
+ * PUT or PATCH /roles/<id>/
+ */
+export const updateRole = async (roleId, roleData, isPartial = false) => {
+  try {
+    const method = isPartial ? 'patch' : 'put';
+    const response = await apiClient[method](`/roles/${roleId}/`, roleData);
+    return response;
+  } catch (error) {
+    handleApiError(error, 'Failed to update role');
+  }
+};
+
+/**
+ * Delete Custom Role
+ * DELETE /roles/<id>/
+ */
+export const deleteRole = async (roleId) => {
+  try {
+    const response = await apiClient.delete(`/roles/${roleId}/`);
+    return response;
+  } catch (error) {
+    handleApiError(error, 'Failed to delete role');
+  }
+};
+
+/**
+ * Get Catalogue of all Grantable System Action Codes
+ * GET /permissions/
+ */
+export const getPermissions = async () => {
+  try {
+    const response = await apiClient.get('/permissions/');
+    return response;
+  } catch (error) {
+    handleApiError(error, 'Failed to fetch permission catalogue');
   }
 };
 
