@@ -30,32 +30,41 @@ export default function AdminEmployeeManagement() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Pagination state
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalCount, setTotalCount] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
+    // All employees (unfiltered, for search/filter across entire DB)
     const [allEmployees, setAllEmployees] = useState([]);
 
-    // Fetch employees with pagination
-    const fetchEmployees = useCallback(async (page = 1) => {
+    // Client-side pagination state
+    const PAGE_SIZE = 10;
+    const [currentPage, setCurrentPage] = useState(1);
+
+    // Fetch ALL employees (no server-side pagination) so search & filter work globally
+    const fetchEmployees = useCallback(async () => {
         try {
             setIsLoading(true);
-            const response = await getEmployees({ page });
-            const data = response.data;
+            // Fetch all pages by using a large page_size, or loop through pages
+            let allData = [];
+            let page = 1;
+            let hasMore = true;
 
-            if (data.results) {
-                // Paginated response
-                setAllEmployees(data.results);
-                setTotalCount(data.count || 0);
-                setTotalPages(Math.ceil((data.count || 0) / 10));
-                setCurrentPage(page);
-            } else if (Array.isArray(data)) {
-                // Non-paginated response (fallback)
-                setAllEmployees(data);
-                setTotalCount(data.length);
-                setTotalPages(1);
-                setCurrentPage(1);
+            while (hasMore) {
+                const response = await getEmployees({ page, page_size: 100 });
+                const data = response.data;
+
+                if (data.results) {
+                    allData = [...allData, ...data.results];
+                    // Check if there's a next page
+                    hasMore = !!data.next;
+                    page++;
+                } else if (Array.isArray(data)) {
+                    allData = data;
+                    hasMore = false;
+                } else {
+                    hasMore = false;
+                }
             }
+
+            setAllEmployees(allData);
+            setCurrentPage(1);
         } catch (error) {
             console.error('Error fetching employees:', error);
             showError('Failed to load employees. Please try again.');
@@ -65,14 +74,14 @@ export default function AdminEmployeeManagement() {
     }, [showError]);
 
     useEffect(() => {
-        fetchEmployees(1);
+        fetchEmployees();
     }, [fetchEmployees]);
 
     const handleUpdate = async (employeeId, updatedData) => {
         try {
             await updateEmployee(employeeId, updatedData);
             showSuccess('Employee updated successfully!');
-            await fetchEmployees(currentPage);
+            await fetchEmployees();
             setEditingEmployee(null);
         } catch (error) {
             console.error('Error updating employee:', error);
@@ -136,7 +145,7 @@ export default function AdminEmployeeManagement() {
             try {
                 await deactivateEmployee(id);
                 showSuccess('Employee record has been deleted successfully!');
-                await fetchEmployees(currentPage);
+                await fetchEmployees();
             } catch (error) {
                 console.error('Error deactivating employee:', error);
                 showError(error.message || 'Failed to deactivate employee. Please try again.');
@@ -153,25 +162,38 @@ export default function AdminEmployeeManagement() {
         try {
             await toggleEmployeeActive(id);
             showSuccess(`Employee has been ${willBeActive ? 'activated' : 'deactivated'} successfully!`);
-            await fetchEmployees(currentPage);
+            await fetchEmployees();
         } catch (error) {
             console.error('Error toggling employee active status:', error);
             showError(error.message || 'Failed to update employee status. Please try again.');
         }
     };
 
-    // Filter and search employees
+    // Known roles in the system
+    const KNOWN_ROLES = ['ADMIN', 'STAFF', 'MANAGER', 'HR'];
+
+    // Filter and search employees across ALL employees (not just current page)
     const filteredEmployees = allEmployees.filter(emp => {
-        const matchesSearch = 
-            (emp.first_name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (emp.last_name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (emp.email?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        const fullName = `${emp.first_name || ''} ${emp.last_name || ''}`.toLowerCase();
+        const term = searchTerm.toLowerCase();
+        const matchesSearch =
+            fullName.includes(term) ||
+            (emp.email?.toLowerCase().includes(term)) ||
             (emp.id?.toString().includes(searchTerm));
-        
+
         const matchesRole = filterRole === 'all' || emp.role === filterRole;
-        
+
         return matchesSearch && matchesRole;
     });
+
+    // Client-side pagination derived values
+    const totalCount = filteredEmployees.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+    const safeCurrentPage = Math.min(currentPage, totalPages);
+    const paginatedEmployees = filteredEmployees.slice(
+        (safeCurrentPage - 1) * PAGE_SIZE,
+        safeCurrentPage * PAGE_SIZE
+    );
 
     const handleResendInviteEmail = async (id) => {
         try {
@@ -185,13 +207,13 @@ export default function AdminEmployeeManagement() {
 
     const handlePageChange = (newPage) => {
         if (newPage >= 1 && newPage <= totalPages) {
-            fetchEmployees(newPage);
+            setCurrentPage(newPage);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     };
 
-    // Get unique roles from current page employees
-    const uniqueRoles = [...new Set(allEmployees.map(emp => emp.role).filter(Boolean))];
+    // Reset to page 1 when search or filter changes
+    useEffect(() => { setCurrentPage(1); }, [searchTerm, filterRole]);
 
     return (
         <ProtectedLayout currentPath={location.pathname}>
@@ -233,7 +255,7 @@ export default function AdminEmployeeManagement() {
                                     className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                 >
                                     <option value="all">All Roles</option>
-                                    {uniqueRoles.map(role => (
+                                    {KNOWN_ROLES.map(role => (
                                         <option key={role} value={role}>
                                             {role}
                                         </option>
@@ -295,11 +317,11 @@ export default function AdminEmployeeManagement() {
                             {/* Summary */}
                         <div className="bg-blue-50 border-b border-slate-200 p-4 flex justify-between items-center">
                             <p className="text-blue-900 font-semibold">
-                                Showing {filteredEmployees.length} of {totalCount} employee{totalCount !== 1 ? 's' : ''}
+                                Showing {paginatedEmployees.length} of {totalCount} employee{totalCount !== 1 ? 's' : ''}
                             </p>
                             {totalPages > 1 && (
                                 <span className="text-sm text-blue-700 font-medium">
-                                    Page {currentPage} of {totalPages}
+                                    Page {safeCurrentPage} of {totalPages}
                                 </span>
                             )}
                         </div>
@@ -316,7 +338,7 @@ export default function AdminEmployeeManagement() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredEmployees.map((employee, index) => (
+                                        {paginatedEmployees.map((employee, index) => (
                                             <tr
                                                 key={employee.id}
                                                 className={`border-b border-slate-200 hover:bg-slate-50 transition-colors ${
@@ -432,8 +454,8 @@ export default function AdminEmployeeManagement() {
                                 <div className="bg-slate-50 border-t border-slate-200 p-4">
                                     <div className="flex items-center justify-between gap-4">
                                         <button
-                                            onClick={() => handlePageChange(currentPage - 1)}
-                                            disabled={currentPage === 1}
+                                            onClick={() => handlePageChange(safeCurrentPage - 1)}
+                                            disabled={safeCurrentPage === 1}
                                             className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 font-semibold rounded-lg transition flex items-center gap-2"
                                         >
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -448,7 +470,7 @@ export default function AdminEmployeeManagement() {
                                                 type="number"
                                                 min="1"
                                                 max={totalPages}
-                                                value={currentPage}
+                                                value={safeCurrentPage}
                                                 onChange={(e) => {
                                                     const page = parseInt(e.target.value);
                                                     if (page >= 1 && page <= totalPages) {
@@ -461,8 +483,8 @@ export default function AdminEmployeeManagement() {
                                         </div>
 
                                         <button
-                                            onClick={() => handlePageChange(currentPage + 1)}
-                                            disabled={currentPage === totalPages}
+                                            onClick={() => handlePageChange(safeCurrentPage + 1)}
+                                            disabled={safeCurrentPage === totalPages}
                                             className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 font-semibold rounded-lg transition flex items-center gap-2"
                                         >
                                             Next

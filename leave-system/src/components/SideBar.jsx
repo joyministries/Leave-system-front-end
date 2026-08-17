@@ -66,7 +66,7 @@ export default function SideBar({
     <>
       {/* ─── DESKTOP SIDEBAR (≥1024px) ─── */}
       <aside
-        className={`hidden lg:flex flex-col border-r border-slate-200 bg-white sticky top-16 h-[calc(100vh-4rem)] flex-shrink-0 z-20 font-sans transition-all duration-200 ease-out motion-reduce:transition-none ${
+        className={`hidden lg:flex flex-col border-r border-slate-200 bg-white sticky top-0 h-screen flex-shrink-0 z-30 font-sans transition-all duration-200 ease-out motion-reduce:transition-none ${
           isDesktopCollapsed ? 'w-16' : 'w-64'
         }`}
       >
