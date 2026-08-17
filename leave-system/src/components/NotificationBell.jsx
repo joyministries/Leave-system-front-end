@@ -7,7 +7,15 @@ import {
   markAllNotificationsRead,
 } from '../services/ApiClient';
 
-// ─── Browser Notification Helpers ────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Returns true if the notification is less than 7 days old */
+const isWithinOneWeek = (notification) => {
+  if (!notification.created_at) return true;
+  return Date.now() - new Date(notification.created_at).getTime() < ONE_WEEK_MS;
+};
 
 const requestBrowserPermission = async () => {
   if (!('Notification' in window)) return 'denied';
@@ -22,9 +30,8 @@ const fireBrowserNotification = (title, body) => {
     body,
     icon: '/favicon.png',
     badge: '/favicon.png',
-    tag: 'leave-system', // groups so they don't stack infinitely
+    tag: 'leave-system',
   });
-  // Focus the tab when the user clicks the OS notification
   n.onclick = () => {
     window.focus();
     n.close();
@@ -35,18 +42,23 @@ const fireBrowserNotification = (title, body) => {
 
 export const NotificationBell = () => {
   const [unreadCount, setUnreadCount] = useState(0);
+  // Only unread + within-one-week notifications are stored here
   const [notifications, setNotifications] = useState([]);
+  // IDs currently animating out (fade-out before removal)
+  const [removingIds, setRemovingIds] = useState(new Set());
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
-
-  // Track which notification IDs have already triggered an OS popup
   const notifiedIds = useRef(new Set());
 
-  // ── Permission: ask once on mount ──────────────────────────────────────────
+  // ── Permission: ask once on mount ─────────────────────────────────────────
   useEffect(() => {
     requestBrowserPermission();
   }, []);
+
+  // ── Filter helper: unread + within one week ────────────────────────────────
+  const filterVisible = (items) =>
+    items.filter((item) => !item.is_read && isWithinOneWeek(item));
 
   // ── Fetch unread count + fire OS notifications for new ones ────────────────
   const fetchUnreadCount = useCallback(async () => {
@@ -55,13 +67,13 @@ export const NotificationBell = () => {
       const count = res.data.unread_count || 0;
       setUnreadCount(count);
 
-      // Only bother fetching full list to check for new items if there are unread ones
       if (count > 0) {
         const listRes = await getNotifications();
         const items = listRes.data.results || listRes.data || [];
+        const visible = filterVisible(items);
 
-        items.forEach((item) => {
-          if (!item.is_read && !notifiedIds.current.has(item.id)) {
+        visible.forEach((item) => {
+          if (!notifiedIds.current.has(item.id)) {
             notifiedIds.current.add(item.id);
             fireBrowserNotification(
               'Leave System – New Notification',
@@ -75,13 +87,13 @@ export const NotificationBell = () => {
     }
   }, []);
 
-  // ── Fetch the full list for the dropdown ──────────────────────────────────
+  // ── Fetch the full list for the dropdown (only unread, within a week) ──────
   const fetchNotificationsList = async () => {
     setLoading(true);
     try {
       const res = await getNotifications();
       const items = res.data.results || res.data || [];
-      setNotifications(items);
+      setNotifications(filterVisible(items));
     } catch (err) {
       console.error('Failed to fetch notifications', err);
     } finally {
@@ -112,15 +124,26 @@ export const NotificationBell = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // ── Pop a notification out with a fade animation, then remove it ────────────
+  const popNotification = (id) => {
+    setRemovingIds((prev) => new Set([...prev, id]));
+    setTimeout(() => {
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      setRemovingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    }, 300); // matches the CSS transition duration
+  };
+
   // ── Actions ────────────────────────────────────────────────────────────────
 
   const handleMarkRead = async (id) => {
     try {
       await markNotificationRead(id);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
+      popNotification(id);
     } catch (err) {
       console.error('Failed to mark read', err);
     }
@@ -129,8 +152,14 @@ export const NotificationBell = () => {
   const handleMarkAllRead = async () => {
     try {
       await markAllNotificationsRead();
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-      setUnreadCount(0);
+      // Animate all out, then clear
+      const allIds = notifications.map((n) => n.id);
+      setRemovingIds(new Set(allIds));
+      setTimeout(() => {
+        setNotifications([]);
+        setRemovingIds(new Set());
+        setUnreadCount(0);
+      }, 300);
     } catch (err) {
       console.error('Failed to mark all read', err);
     }
@@ -168,8 +197,11 @@ export const NotificationBell = () => {
         <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-100">
-            <h3 className="font-semibold text-slate-800 text-sm">Notifications</h3>
-            {unreadCount > 0 && (
+            <div>
+              <h3 className="font-semibold text-slate-800 text-sm">Notifications</h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">Unread · last 7 days</p>
+            </div>
+            {notifications.length > 0 && (
               <button
                 onClick={handleMarkAllRead}
                 className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition"
@@ -197,39 +229,50 @@ export const NotificationBell = () => {
             {loading ? (
               <div className="p-6 text-center text-xs text-slate-400">Loading notifications...</div>
             ) : notifications.length === 0 ? (
-              <div className="p-6 text-center text-xs text-slate-400">No notifications found.</div>
+              <div className="p-8 text-center">
+                <FiBell className="text-3xl text-slate-200 mx-auto mb-2" />
+                <p className="text-xs text-slate-400 font-medium">You're all caught up!</p>
+                <p className="text-[11px] text-slate-300 mt-1">No unread notifications.</p>
+              </div>
             ) : (
-              notifications.map((item) => (
-                <div
-                  key={item.id}
-                  className={`p-3.5 hover:bg-slate-50 transition flex items-start justify-between gap-3 ${
-                    !item.is_read ? 'bg-blue-50/40' : ''
-                  }`}
-                >
-                  <div className="space-y-1 flex-1">
-                    <span
-                      className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${getBadgeStyle(
-                        item.notification_type
-                      )}`}
-                    >
-                      {item.notification_type?.replace('LEAVE_', '')}
-                    </span>
-                    <p className="text-xs text-slate-700 leading-snug">{item.message}</p>
-                    <p className="text-[10px] text-slate-400">
-                      {new Date(item.created_at).toLocaleString()}
-                    </p>
-                  </div>
-                  {!item.is_read && (
+              notifications.map((item) => {
+                const isRemoving = removingIds.has(item.id);
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      transition: 'opacity 300ms ease, transform 300ms ease, max-height 300ms ease',
+                      opacity: isRemoving ? 0 : 1,
+                      transform: isRemoving ? 'translateX(16px)' : 'translateX(0)',
+                      maxHeight: isRemoving ? '0' : '200px',
+                      overflow: 'hidden',
+                    }}
+                    className="p-3.5 hover:bg-slate-50 flex items-start justify-between gap-3 bg-blue-50/40"
+                  >
+                    <div className="space-y-1 flex-1">
+                      <span
+                        className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${getBadgeStyle(
+                          item.notification_type
+                        )}`}
+                      >
+                        {item.notification_type?.replace('LEAVE_', '')}
+                      </span>
+                      <p className="text-xs text-slate-700 leading-snug">{item.message}</p>
+                      <p className="text-[10px] text-slate-400">
+                        {new Date(item.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                    {/* Mark as read — pops it out */}
                     <button
                       onClick={() => handleMarkRead(item.id)}
-                      className="text-slate-400 hover:text-blue-600 p-1 transition"
+                      className="text-slate-400 hover:text-blue-600 p-1 transition shrink-0"
                       title="Mark as read"
                     >
                       <FiCheck className="text-sm" />
                     </button>
-                  )}
-                </div>
-              ))
+                  </div>
+                );
+              })
             )}
           </div>
         </div>

@@ -58,6 +58,13 @@ const RequestTableRow = ({ request, onViewDocument, onUploadDocument, uploading 
         <span className="bg-slate-100 px-2 py-1 rounded text-xs font-semibold">
           {request.leave_duration || 'N/A'} days
         </span>
+        {request.extra_unpaid_days > 0 && (
+          <span
+            className="ml-1 bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs font-semibold"
+          >
+            {`\u26a0\ufe0f ${request.extra_unpaid_days}d unpaid`}
+          </span>
+        )}
       </td>
       <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">
         {request.reason || 'No reason provided'}
