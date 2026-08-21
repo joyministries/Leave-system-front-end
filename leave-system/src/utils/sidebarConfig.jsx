@@ -9,7 +9,8 @@ import {
     MdSettings,
     MdPeopleAlt,
     MdDomain,
-    MdListAlt
+    MdListAlt,
+    MdShield
 } from 'react-icons/md';
 
 // A single source of truth for all routes in the application
@@ -104,6 +105,14 @@ export const ALL_MENU_ITEMS = [
         allowedRoles: ['admin'],
         description: 'Manage university branches',
         navIcon: MdDomain
+    },
+    {
+        id: 'admin-roles',
+        label: 'Role Management',
+        path: '/admin/roles',
+        allowedRoles: ['admin'],
+        description: 'Manage roles and action permissions',
+        navIcon: MdShield
     }
 
 ];

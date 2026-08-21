@@ -23,6 +23,10 @@ export default function AdminBranches() {
   const [isLeaveTypesOpen, setIsLeaveTypesOpen] = useState(false);
   const dropdownRef = useRef(null);
 
+  // Kebab menu state for branch actions
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const actionMenuRef = useRef(null);
+
   // Fetch branches and leave types
   useEffect(() => {
     const fetchData = async () => {
@@ -54,11 +58,14 @@ export default function AdminBranches() {
     fetchData();
   }, [showError]);
 
-  // Close dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setIsLeaveTypesOpen(false);
+      }
+      if (actionMenuRef.current && !actionMenuRef.current.contains(e.target)) {
+        setOpenMenuId(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -284,27 +291,55 @@ export default function AdminBranches() {
                             )}
                           </td>
                           <td className="px-4 sm:px-6 py-4 text-center">
-                            <div className="flex items-center justify-center gap-2">
+                            <div className="relative inline-block" ref={openMenuId === branch.id ? actionMenuRef : null}>
+                              {/* 3-Dot Trigger */}
                               <button
-                                onClick={() => handleEditBranch(branch)}
-                                className="inline-flex items-center gap-1 px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-semibold rounded-lg transition"
-                                title="Edit branch"
+                                onClick={() => setOpenMenuId(prev => prev === branch.id ? null : branch.id)}
+                                className="flex items-center justify-center w-9 h-9 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors mx-auto"
+                                title="Branch Actions"
+                                aria-label="Branch Actions"
                               >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                  <circle cx="12" cy="5" r="1.5" />
+                                  <circle cx="12" cy="12" r="1.5" />
+                                  <circle cx="12" cy="19" r="1.5" />
                                 </svg>
-                                <span className="hidden sm:inline">Edit</span>
                               </button>
-                              <button
-                                onClick={() => handleDeleteBranch(branch.id)}
-                                className="inline-flex items-center gap-1 px-3 py-2 bg-red-100 hover:bg-red-200 text-red-800 text-xs font-semibold rounded-lg transition"
-                                title="Delete branch"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                <span className="hidden sm:inline">Delete</span>
-                              </button>
+
+                              {/* Kebab Dropdown Menu */}
+                              {openMenuId === branch.id && (
+                                <div className="absolute right-0 z-50 mt-1 w-44 bg-white rounded-xl shadow-xl border border-slate-200 py-1 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150 text-left">
+                                  {/* Edit Button */}
+                                  <button
+                                    onClick={() => {
+                                      handleEditBranch(branch);
+                                      setOpenMenuId(null);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                                  >
+                                    <svg className="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    Edit Branch
+                                  </button>
+
+                                  <div className="my-1 border-t border-slate-100" />
+
+                                  {/* Delete Button */}
+                                  <button
+                                    onClick={() => {
+                                      handleDeleteBranch(branch.id);
+                                      setOpenMenuId(null);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
+                                  >
+                                    <svg className="w-4 h-4 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                    Delete Branch
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </td>
                         </tr>

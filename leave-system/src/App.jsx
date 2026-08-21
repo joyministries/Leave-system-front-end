@@ -12,6 +12,7 @@ import AdminManageLeaves from "./pages/AdminManageLeaves.jsx";
 import AdminEmployeeManagement from "./pages/AdminEmployeeManagement.jsx";
 import AdminBranches from "./pages/AdminBranches.jsx";
 import AdminAllLeaves from "./pages/AdminAllLeaves.jsx";
+import AdminRoleManagement from "./pages/AdminRoleManagement.jsx";
 import SetPassword from "./pages/SetPassword.jsx";
 
 export default function App() {
@@ -37,6 +38,7 @@ export default function App() {
       <Route path="/admin/manage/leaves" element={<AdminManageLeaves />} />
       <Route path="/admin/manage/employees" element={<AdminEmployeeManagement />} />
       <Route path="/admin/branches" element={<AdminBranches />} />
+      <Route path="/admin/roles" element={<AdminRoleManagement />} />
     </Routes>
   );
 }
