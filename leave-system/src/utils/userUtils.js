@@ -91,3 +91,35 @@ export const verifyUserData = (user) => {
         missingFields,
     };
 };
+
+/**
+ * Get user's institution/branch name with fallback to default organization name
+ * Priority: user.institution_name > user.institution.name > user.institution > user.branch_name > user.branch.name > 'Team Impact Christian University'
+ * @param {object} user - User object
+ * @returns {string} Institution name or fallback
+ */
+export const getUserInstitutionName = (user) => {
+    if (!user) return 'Team Impact Christian University';
+
+    if (user?.institution_name && typeof user.institution_name === 'string' && user.institution_name.trim()) {
+        return user.institution_name.trim();
+    }
+    if (user?.institution && typeof user.institution === 'object' && user.institution.name) {
+        return user.institution.name.trim();
+    }
+    if (user?.institution && typeof user.institution === 'string' && isNaN(Number(user.institution)) && user.institution.trim()) {
+        return user.institution.trim();
+    }
+    if (user?.branch_name && typeof user.branch_name === 'string' && user.branch_name.trim()) {
+        return user.branch_name.trim();
+    }
+    if (user?.branch && typeof user.branch === 'object' && user.branch.name) {
+        return user.branch.name.trim();
+    }
+    if (user?.branch && typeof user.branch === 'string' && isNaN(Number(user.branch)) && user.branch.trim()) {
+        return user.branch.trim();
+    }
+
+    return 'Team Impact Christian University';
+};
+

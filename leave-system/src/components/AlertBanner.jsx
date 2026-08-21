@@ -57,7 +57,7 @@ export const AlertBanner = ({
 
     return (
         <div 
-            className={`fixed top-4 left-4 ${style.bg} border ${style.border} ${style.text} px-4 py-3 rounded-lg shadow-lg max-w-md z-50 flex items-start gap-3 whitespace-normal break-words`}
+            className={`fixed top-4 left-4 ${style.bg} border ${style.border} ${style.text} px-4 py-3 rounded-lg shadow-lg max-w-md z-[9999] flex items-start gap-3 whitespace-normal break-words`}
         >
             {/* Icon */}
             <div className="flex-shrink-0 text-xl mt-0.5">

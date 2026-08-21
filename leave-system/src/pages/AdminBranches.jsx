@@ -6,6 +6,7 @@ import {
   getInstitutions, 
   createInstitution, 
   updateInstitution, 
+  partialUpdateInstitution,
   deleteInstitution,
   getLeaveTypes 
 } from '../services/ApiClient';
@@ -28,34 +29,35 @@ export default function AdminBranches() {
   const actionMenuRef = useRef(null);
 
   // Fetch branches and leave types
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const [branchesRes, leaveTypesRes] = await Promise.allSettled([
-          getInstitutions(),
-          getLeaveTypes()
-        ]);
+  const fetchAllData = async () => {
+    setIsLoading(true);
+    try {
+      const [branchesRes, leaveTypesRes] = await Promise.allSettled([
+        getInstitutions(),
+        getLeaveTypes()
+      ]);
 
-        if (branchesRes.status === 'fulfilled') {
-          const bData = branchesRes.value?.data?.results || branchesRes.value?.data || [];
-          setBranches(Array.isArray(bData) ? bData : []);
-        } else {
-          showError('Failed to load branches.');
-        }
-
-        if (leaveTypesRes.status === 'fulfilled' && Array.isArray(leaveTypesRes.value)) {
-          setAvailableLeaveTypes(leaveTypesRes.value);
-        }
-      } catch (error) {
-        console.error('Error initializing branch page data:', error);
-        showError('Failed to load initial branch data.');
-      } finally {
-        setIsLoading(false);
+      if (branchesRes.status === 'fulfilled') {
+        const bData = branchesRes.value?.data?.results || branchesRes.value?.data || [];
+        setBranches(Array.isArray(bData) ? bData : []);
+      } else {
+        showError('Failed to load branches.');
       }
-    };
 
-    fetchData();
+      if (leaveTypesRes.status === 'fulfilled') {
+        const ltData = leaveTypesRes.value?.data?.results || leaveTypesRes.value?.data || leaveTypesRes.value || [];
+        setAvailableLeaveTypes(Array.isArray(ltData) ? ltData : []);
+      }
+    } catch (error) {
+      console.error('Error initializing branch page data:', error);
+      showError('Failed to load initial branch data.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllData();
   }, [showError]);
 
   // Close dropdowns on outside click
@@ -75,6 +77,7 @@ export default function AdminBranches() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -97,9 +100,9 @@ export default function AdminBranches() {
   const handleToggleLeaveType = (leaveTypeId) => {
     setFormData(prev => {
       const current = prev.leave_types || [];
-      const exists = current.includes(leaveTypeId);
+      const exists = current.some(id => String(id) === String(leaveTypeId));
       const updated = exists 
-        ? current.filter(id => id !== leaveTypeId) 
+        ? current.filter(id => String(id) !== String(leaveTypeId)) 
         : [...current, leaveTypeId];
       return { ...prev, leave_types: updated };
     });
@@ -133,6 +136,7 @@ export default function AdminBranches() {
     setEditingId(null);
     setFormData({ name: '', leave_types: [] });
     setErrors({});
+    setIsLeaveTypesOpen(false);
     setIsModalOpen(true);
   };
 
@@ -140,16 +144,19 @@ export default function AdminBranches() {
     setIsEditing(true);
     setEditingId(branch.id);
     
-    // Support leave_types array of objects or IDs
-    const existingLeaveTypes = Array.isArray(branch.leave_types)
-      ? branch.leave_types.map(lt => (typeof lt === 'object' ? lt.id : lt))
-      : (Array.isArray(branch.allowed_leave_types) ? branch.allowed_leave_types.map(lt => (typeof lt === 'object' ? lt.id : lt)) : []);
+    // Support leave_types or allowed_leave_types array of objects or IDs
+    const rawList = Array.isArray(branch.leave_types)
+      ? branch.leave_types
+      : (Array.isArray(branch.allowed_leave_types) ? branch.allowed_leave_types : []);
+
+    const existingLeaveTypes = rawList.map(lt => (typeof lt === 'object' && lt !== null ? (lt.id ?? lt.name) : lt));
 
     setFormData({
       name: branch.name || '',
       leave_types: existingLeaveTypes
     });
     setErrors({});
+    setIsLeaveTypesOpen(false);
     setIsModalOpen(true);
   };
 
@@ -174,22 +181,38 @@ export default function AdminBranches() {
       return;
     }
 
+    setIsSubmitting(true);
     try {
+      // Send both leave_types and allowed_leave_types keys to support whichever the backend serializer expects
+      const payload = {
+        name: formData.name.trim(),
+        leave_types: formData.leave_types,
+        allowed_leave_types: formData.leave_types,
+      };
+
       if (isEditing) {
-        const response = await updateInstitution(editingId, formData);
-        const updatedBranch = response.data;
-        setBranches(prev => prev.map(b => b.id === editingId ? updatedBranch : b));
+        if (typeof partialUpdateInstitution === 'function') {
+          await partialUpdateInstitution(editingId, payload).catch(() => updateInstitution(editingId, payload));
+        } else {
+          await updateInstitution(editingId, payload);
+        }
         showSuccess('Branch updated successfully!');
       } else {
-        const response = await createInstitution(formData);
-        const newBranch = response.data;
-        setBranches(prev => [...prev, newBranch]);
+        await createInstitution(payload);
         showSuccess('Branch added successfully!');
       }
+
+      // Re-fetch branches from backend
+      const res = await getInstitutions();
+      const freshBranches = res?.data?.results || res?.data || [];
+      setBranches(Array.isArray(freshBranches) ? freshBranches : []);
+
       handleCloseModal();
     } catch (error) {
       console.error('Error saving branch:', error);
       showError(error.message || 'Failed to save branch. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -200,14 +223,15 @@ export default function AdminBranches() {
     setIsEditing(false);
     setEditingId(null);
     setIsLeaveTypesOpen(false);
+    setIsSubmitting(false);
   };
 
   // Helper to resolve leave type names for display
   const getLeaveTypeName = (leaveTypeRef) => {
     if (typeof leaveTypeRef === 'object' && leaveTypeRef !== null) {
-      return leaveTypeRef.name || leaveTypeRef.label;
+      return leaveTypeRef.name || leaveTypeRef.label || leaveTypeRef.leave_type_name || 'Leave';
     }
-    const found = availableLeaveTypes.find(lt => lt.id === leaveTypeRef || lt.name === leaveTypeRef);
+    const found = availableLeaveTypes.find(lt => String(lt.id) === String(leaveTypeRef) || lt.name === leaveTypeRef);
     return found ? found.name : String(leaveTypeRef);
   };
 
@@ -247,7 +271,7 @@ export default function AdminBranches() {
             </div>
 
             {/* Table */}
-            <div className="overflow-x-auto">
+            <div className={`overflow-x-auto transition-all duration-200 ${openMenuId ? 'min-h-[260px] pb-28' : 'min-h-[140px]'}`}>
               <table className="w-full">
                 <thead>
                   <tr className="bg-slate-100 border-b border-slate-200">
@@ -287,7 +311,7 @@ export default function AdminBranches() {
                                 ))}
                               </div>
                             ) : (
-                              <span className="text-slate-400 text-xs italic">All leave types (default)</span>
+                              <span className="text-slate-400 text-xs italic">No leave types allowed</span>
                             )}
                           </td>
                           <td className="px-4 sm:px-6 py-4 text-center">
@@ -364,7 +388,7 @@ export default function AdminBranches() {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-30"
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 transition-opacity"
             onClick={handleCloseModal}
           ></div>
 
@@ -426,7 +450,7 @@ export default function AdminBranches() {
                           const ltName = getLeaveTypeName(ltId);
                           return (
                             <span
-                              key={ltId}
+                              key={String(ltId)}
                               className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-md border border-blue-200"
                             >
                               {ltName}
@@ -481,7 +505,7 @@ export default function AdminBranches() {
 
                       {availableLeaveTypes.length > 0 ? (
                         availableLeaveTypes.map((leaveType) => {
-                          const isSelected = formData.leave_types.includes(leaveType.id);
+                          const isSelected = formData.leave_types.some(id => String(id) === String(leaveType.id) || String(id) === String(leaveType.name));
                           return (
                             <label
                               key={leaveType.id}
@@ -517,14 +541,42 @@ export default function AdminBranches() {
                 <div className="flex gap-3 pt-4">
                   <button
                     type="submit"
-                    className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-md"
+                    disabled={isSubmitting}
+                    className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all shadow-md flex items-center justify-center gap-2"
                   >
-                    {isEditing ? 'Update Branch' : 'Add Branch'}
+                    {isSubmitting ? (
+                      <>
+                        <svg
+                          className="animate-spin h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        <span>{isEditing ? 'Updating Branch...' : 'Adding Branch...'}</span>
+                      </>
+                    ) : (
+                      <span>{isEditing ? 'Update Branch' : 'Add Branch'}</span>
+                    )}
                   </button>
                   <button
                     type="button"
+                    disabled={isSubmitting}
                     onClick={handleCloseModal}
-                    className="flex-1 px-4 py-3 bg-slate-200 hover:bg-slate-300 text-slate-900 font-semibold rounded-lg transition-colors"
+                    className="flex-1 px-4 py-3 bg-slate-200 hover:bg-slate-300 disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 font-semibold rounded-lg transition-colors"
                   >
                     Cancel
                   </button>

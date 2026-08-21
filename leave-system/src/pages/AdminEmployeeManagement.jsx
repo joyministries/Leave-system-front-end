@@ -313,7 +313,7 @@ export default function AdminEmployeeManagement() {
                             </div>
                         </div>
                     ) : (
-                        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+                        <div className={`bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden transition-all duration-200 ${openMenuId ? 'pb-24' : ''}`}>
                             {/* Summary */}
                         <div className="bg-blue-50 border-b border-slate-200 p-4 flex justify-between items-center">
                             <p className="text-blue-900 font-semibold">
@@ -327,7 +327,7 @@ export default function AdminEmployeeManagement() {
                         </div>
 
                             {/* Table */}
-                            <div className="overflow-x-auto">
+                            <div className={`overflow-x-auto transition-all duration-200 ${openMenuId ? 'min-h-[300px] pb-32' : 'min-h-[160px]'}`}>
                                 <table className="w-full border-collapse">
                                     <thead>
                                         <tr className="bg-slate-100 border-b border-slate-200">
@@ -507,7 +507,7 @@ export default function AdminEmployeeManagement() {
                 <>
                     {/* Backdrop */}
                     <div
-                        className="fixed inset-0 backdrop-blur z-30"
+                        className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 transition-opacity"
                         onClick={handleCancelEdit}
                     ></div>
 

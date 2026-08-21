@@ -1,6 +1,7 @@
 import { checkUserRole } from './authorize';
 import {
     MdOutlineSpaceDashboard,
+    MdPostAdd,
     MdHistory,
     MdEventNote,
     MdInsertChartOutlined,
@@ -14,8 +15,7 @@ import {
 } from 'react-icons/md';
 
 // A single source of truth for all routes in the application
-export const ALL_MENU_ITEMS = [
-    // --- STAFF ROUTES ---
+export const STAFF_MENU_ITEMS = [
     {
         id: 'dashboard',
         label: 'Dashboard',
@@ -25,6 +25,14 @@ export const ALL_MENU_ITEMS = [
         navIcon: MdOutlineSpaceDashboard
     },
     {
+        id: 'apply-leave',
+        label: 'Apply Leave',
+        path: '/apply-leave',
+        allowedRoles: ['staff'],
+        description: 'Submit a new leave request',
+        navIcon: MdPostAdd
+    },
+    {
         id: 'my-requests',
         label: 'My Requests (History)',
         path: '/my-requests',
@@ -32,8 +40,17 @@ export const ALL_MENU_ITEMS = [
         description: 'View your leave request history',
         navIcon: MdHistory
     },
+    {
+        id: 'calendar',
+        label: 'Calendar',
+        path: '/calendar',
+        allowedRoles: ['staff'],
+        description: 'View the company leave calendar',
+        navIcon: MdCalendarToday
+    }
+];
 
-    // --- ADMIN ROUTES (Organized in order) ---
+export const ADMIN_MENU_ITEMS = [
     {
         id: 'admin-dashboard',
         label: 'Dashboard',
@@ -44,7 +61,7 @@ export const ALL_MENU_ITEMS = [
     },
     {
         id: 'admin-applications',
-        label: 'Applications',
+        label: 'Leave Applications',
         path: '/admin/applications',
         allowedRoles: ['admin'],
         description: 'Review and process leave applications',
@@ -52,43 +69,19 @@ export const ALL_MENU_ITEMS = [
     },
     {
         id: 'admin-all-leaves',
-        label: 'All Leave Records',
+        label: 'All leave records',
         path: '/admin/all-leaves',
         allowedRoles: ['admin'],
         description: 'Browse all leave requests by month with pagination',
         navIcon: MdListAlt
     },
     {
-        id: 'admin-employees',
-        label: 'Reports',
-        path: '/admin/reports',
+        id: 'admin-apply-leave',
+        label: 'Apply Leave',
+        path: '/apply-leave',
         allowedRoles: ['admin'],
-        description: 'View employee reports',
-        navIcon: MdInsertChartOutlined
-    },
-    {
-        id: 'admin-calendar',
-        label: 'Calendar',
-        path: '/calendar',
-        allowedRoles: ['admin', 'staff'],
-        description: 'View the company leave calendar',
-        navIcon: MdCalendarToday
-    },
-    {
-        id: 'admin-add-employee',
-        label: 'Add Employee',
-        path: '/admin/add-employee',
-        allowedRoles: ['admin'],
-        description: 'Create a new employee account',
-        navIcon: MdPersonAddAlt1
-    },
-    {
-        id: 'admin-leaves',
-        label: 'Leaves',
-        path: '/admin/manage/leaves',
-        allowedRoles: ['admin'],
-        description: 'Manage leave types and settings',
-        navIcon: MdSettings
+        description: 'Submit a new leave request',
+        navIcon: MdPostAdd
     },
     {
         id: 'admin-employee-management',
@@ -99,12 +92,12 @@ export const ALL_MENU_ITEMS = [
         navIcon: MdPeopleAlt
     },
     {
-        id: 'admin-branches',
-        label: 'Branches',
-        path: '/admin/branches',
+        id: 'admin-add-employee',
+        label: 'Add Employee',
+        path: '/admin/add-employee',
         allowedRoles: ['admin'],
-        description: 'Manage university branches',
-        navIcon: MdDomain
+        description: 'Create a new employee account',
+        navIcon: MdPersonAddAlt1
     },
     {
         id: 'admin-roles',
@@ -113,22 +106,60 @@ export const ALL_MENU_ITEMS = [
         allowedRoles: ['admin'],
         description: 'Manage roles and action permissions',
         navIcon: MdShield
+    },
+    {
+        id: 'admin-branches',
+        label: 'Branches',
+        path: '/admin/branches',
+        allowedRoles: ['admin'],
+        description: 'Manage university branches',
+        navIcon: MdDomain
+    },
+    {
+        id: 'admin-leaves',
+        label: 'Leaves',
+        path: '/admin/manage/leaves',
+        allowedRoles: ['admin'],
+        description: 'Manage leave types and settings',
+        navIcon: MdSettings
+    },
+    {
+        id: 'admin-calendar',
+        label: 'Calendar',
+        path: '/calendar',
+        allowedRoles: ['admin'],
+        description: 'View the company leave calendar',
+        navIcon: MdCalendarToday
+    },
+    {
+        id: 'admin-reports',
+        label: 'Reports',
+        path: '/admin/reports',
+        allowedRoles: ['admin'],
+        description: 'View employee reports',
+        navIcon: MdInsertChartOutlined
     }
-
 ];
+
+export const ALL_MENU_ITEMS = [...STAFF_MENU_ITEMS, ...ADMIN_MENU_ITEMS];
 
 /**
  * Returns only the menu items the current user is authorized to see.
  */
 export const getAuthorizedMenuItems = (user) => {
     if (!user) return [];
-    return ALL_MENU_ITEMS.filter(item => checkUserRole(user, item.allowedRoles));
+    const isUserAdmin = checkUserRole(user, ['admin']);
+    if (isUserAdmin) {
+        return ADMIN_MENU_ITEMS;
+    }
+    return STAFF_MENU_ITEMS.filter(item => checkUserRole(user, item.allowedRoles));
 };
 
 /**
  * Quick check to see if a path is accessible for the user to protect routes
  */
 export const isPathAccessible = (path, user) => {
-    const authorizedItems = getAuthorizedMenuItems(user);
-    return authorizedItems.some(item => item.path === path);
+    if (!user) return false;
+    const authorized = getAuthorizedMenuItems(user);
+    return authorized.some(item => item.path === path);
 };

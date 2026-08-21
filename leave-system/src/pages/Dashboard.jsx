@@ -1,21 +1,20 @@
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/authhook';
 import { useAlert } from '../hooks/alerthook';
 import { useEffect, useState } from 'react';
-import { getMyLeaves, getLeaveTypes } from '../services/ApiClient';
-import { getUserDisplayName } from '../utils/userUtils';
+import { getMyLeaves, getLeaveTypes, getInstitutions } from '../services/ApiClient';
+import { getUserDisplayName, getUserInstitutionName } from '../utils/userUtils';
 import ProtectedLayout from '../components/ProtectedLayout';
-import ApplyLeaveModal from '../components/ApplyLeaveModal';
 import ApprovedLeaveCard from '../components/LeaveStats';
 import { LeaveSummaryCard } from '../components/LeaveSummaryCard';
 
 export default function Dashboard() {
     const location = useLocation();
+    const navigate = useNavigate();
     const { user } = useAuth();
     const { showError, showSuccess } = useAlert();
     const [ongoingLeaves, setOngoingLeaves] = useState([]);
     const [pendingLeaves, setPendingLeaves] = useState([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const [myLeaveSummary, setMyLeaveSummary] = useState(null);
     const [loading, setLoading] = useState(false);
 
@@ -29,8 +28,9 @@ export default function Dashboard() {
         return 'Good Evening';
     };
     const handleApplyLeaveClick = () => {
-        setIsModalOpen(true);
+        navigate('/apply-leave');
     };
+
     const greetingText = `${getGreeting()}, ${getUserDisplayName(user)}!`;
     const subtitleText = 'Track your leave status and apply for new leaves';
 
@@ -103,17 +103,64 @@ export default function Dashboard() {
         }
     };
 
+    const filterTypesByBranch = (allTypes, institutions, currentUser) => {
+        if (!currentUser || !(currentUser.institution || currentUser.institution_id || currentUser.institution_name || currentUser.branch)) {
+            return allTypes;
+        }
+        const instList = Array.isArray(institutions) ? institutions : [];
+        const userInst = instList.find(i => 
+            String(i.id) === String(currentUser.institution) || 
+            String(i.id) === String(currentUser.institution_id) ||
+            String(i.id) === String(currentUser.branch) ||
+            i.name === currentUser.institution ||
+            i.name === currentUser.institution_name
+        );
+        if (!userInst) return allTypes;
+
+        const rawAllowed = Array.isArray(userInst.leave_types) 
+            ? userInst.leave_types 
+            : (Array.isArray(userInst.allowed_leave_types) ? userInst.allowed_leave_types : null);
+
+        if (Array.isArray(rawAllowed)) {
+            if (rawAllowed.length === 0) return [];
+            const allowedIds = rawAllowed.map(lt => typeof lt === 'object' && lt !== null ? (lt.id ?? lt.name) : lt);
+            return allTypes.filter(t => 
+                allowedIds.some(id => String(id) === String(t.id) || String(id) === String(t.name))
+            );
+        }
+        return allTypes;
+    };
+
     useEffect(() => {
         const loadDashboardData = async () => {
             setLoading(true);
 
-            try{
-                const [leaveRes, typesRes] = await Promise.all([
+            try {
+                const [leaveRes, typesRes, instRes] = await Promise.allSettled([
                     getMyLeaves(),
-                    getLeaveTypes()
+                    getLeaveTypes(),
+                    getInstitutions()
                 ]);
-                const leaveData = Array.isArray(leaveRes.data.results) ? leaveRes.data.results : leaveRes.data.results || [];
-                const typesData = Array.isArray(typesRes) ? typesRes : typesRes.data || [];
+
+                let leaveData = [];
+                if (leaveRes.status === 'fulfilled') {
+                    const d = leaveRes.value?.data;
+                    leaveData = Array.isArray(d?.results) ? d.results : (Array.isArray(d) ? d : []);
+                }
+
+                let allTypes = [];
+                if (typesRes.status === 'fulfilled') {
+                    const d = typesRes.value;
+                    allTypes = Array.isArray(d?.data?.results) ? d.data.results : (Array.isArray(d?.data) ? d.data : (Array.isArray(d) ? d : []));
+                }
+
+                let instData = [];
+                if (instRes.status === 'fulfilled') {
+                    const d = instRes.value?.data;
+                    instData = Array.isArray(d?.results) ? d.results : (Array.isArray(d) ? d : []);
+                }
+
+                const filteredTypes = filterTypesByBranch(allTypes, instData, user);
                 
                 const approvedLeaves = leaveData.filter(leave => leave.status?.toLowerCase() === 'approved');
                 const pendingLeaveList = leaveData.filter(leave => leave.status?.toLowerCase() === 'pending');
@@ -122,22 +169,22 @@ export default function Dashboard() {
                 setPendingLeaves(pendingLeaveList);
                 
                 // Calculate summary from leave types and approved leaves
-                const calculatedSummary = calculateLeaveSummary(typesData, approvedLeaves);
+                const calculatedSummary = calculateLeaveSummary(filteredTypes, approvedLeaves);
                 setMyLeaveSummary(calculatedSummary);
                 showSuccess('Welcome to your dashboard!');
             } catch (error) {
                 showError('Failed to load dashboard data');
-                console.error("Failed to fetch data: ", error)
+                console.error("Failed to fetch data: ", error);
             } finally {
                 setLoading(false);
             }
         };
         loadDashboardData();
-    }, [showError, showSuccess]);
+    }, [showError, showSuccess, user]);
 
     return (
         <ProtectedLayout
-            title="Team Impact Christian University"
+            title={getUserInstitutionName(user)}
             subtitle={subtitleText}
             action={{ label: 'Apply Leave', onClick: handleApplyLeaveClick }}
             currentPath={location.pathname}
@@ -180,7 +227,7 @@ export default function Dashboard() {
                             <table className="w-full">
                                 <thead className="bg-slate-50">
                                     <tr>
-                                        <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Type</th>
+                                        <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Leave Type Name</th>
                                         <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Start Date</th>
                                         <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">End Date</th>
                                         <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
@@ -195,7 +242,7 @@ export default function Dashboard() {
                                             return (
                                                 <tr key={request.id} className="border-t border-slate-200 hover:bg-slate-50">
                                                     <td className="px-4 md:px-6 py-4 text-sm font-medium text-slate-900">
-                                                        {formatLeaveType(request.leave_type || request.type)}
+                                                        {request.leave_type_name || formatLeaveType(request.leave_type || request.type)}
                                                     </td>
                                                     <td className="px-4 md:px-6 py-4 text-sm text-slate-600">
                                                         {request.start_date ? formatDate(request.start_date) : 'N/A'}
@@ -227,49 +274,6 @@ export default function Dashboard() {
                     </div>
                 </>
             )}
-
-            {/* Apply Leave Modal */}
-            <ApplyLeaveModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onSubmitSuccess={() => {
-                    setIsModalOpen(false);
-                    showSuccess('Leave request submitted successfully!');
-                    // Refresh leave requests and recalculate summary
-                    const fetchLeaveRequests = async () => {
-                        try {
-                            const [leaveRes, typesRes] = await Promise.all([
-                                getMyLeaves(),
-                                getLeaveTypes()
-                            ]);
-                            const data = leaveRes.data.results || leaveRes.data || [];
-                            const leaveData = Array.isArray(data) ? data : [];
-                            const typesData = Array.isArray(typesRes) ? typesRes : typesRes.data || [];
-
-                            // Filter out any undefined/null entries
-                            const validLeaves = leaveData.filter(leave => leave && leave.id);
-
-                            const formattedLeaveData = validLeaves.map(leave => ({
-                                ...leave,
-                                leave_type: formatLeaveType(leave.leave_type || leave.type)
-                            }));
-                            const approvedLeaves = formattedLeaveData.filter(leave => leave.status?.toLowerCase() === 'approved');
-                            const pendingLeaveList = formattedLeaveData.filter(leave => leave.status?.toLowerCase() === 'pending');
-                            
-                            setOngoingLeaves(approvedLeaves);
-                            setPendingLeaves(pendingLeaveList);
-                            
-                            // Recalculate summary with updated leave data
-                            const updatedSummary = calculateLeaveSummary(typesData, approvedLeaves);
-                            setMyLeaveSummary(updatedSummary);
-                        } catch (error) {
-                            console.error('Error fetching leave requests:', error);
-                            showError('Failed to refresh leave requests.');
-                        }
-                    };
-                    fetchLeaveRequests();
-                }}
-            />
         </ProtectedLayout>
     );
 }

@@ -60,6 +60,7 @@ export default function AdminApplications() {
   const { showSuccess, showError } = useAlert();
   const [applications, setApplications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   // Modal State
   const [reviewModal, setReviewModal] = useState({
@@ -161,12 +162,14 @@ export default function AdminApplications() {
   };
 
   const closeReviewModal = () => {
+    if (isSubmittingReview) return;
     setReviewModal({ isOpen: false, app: null, actionType: '', remarks: '', startDate: '', endDate: '' });
   };
 
   // Submit the Review
   const submitReview = async () => {
     try {
+      setIsSubmittingReview(true);
       const payload = {
         status: reviewModal.actionType,
         admin_remarks: reviewModal.remarks,
@@ -184,6 +187,8 @@ export default function AdminApplications() {
     } catch (error) {
       console.error('Error updating leave:', error);
       showError('Failed to process application. Please try again.');
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -313,7 +318,7 @@ export default function AdminApplications() {
       {/* REVIEW MODAL */}
       {reviewModal.isOpen && (
         <>
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40" onClick={closeReviewModal}></div>
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 transition-opacity" onClick={closeReviewModal}></div>
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 sm:p-8">
               <div className="flex justify-between items-center mb-6">
@@ -357,18 +362,20 @@ export default function AdminApplications() {
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
                   <input
                     type="date"
+                    disabled={isSubmittingReview}
                     value={reviewModal.startDate}
                     onChange={(e) => setReviewModal({ ...reviewModal, startDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">End Date</label>
                   <input
                     type="date"
+                    disabled={isSubmittingReview}
                     value={reviewModal.endDate}
                     onChange={(e) => setReviewModal({ ...reviewModal, endDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
                   />
                 </div>
               </div>
@@ -394,23 +401,42 @@ export default function AdminApplications() {
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Admin Remarks (Optional)</label>
                 <textarea
                   rows="3"
+                  disabled={isSubmittingReview}
                   placeholder="Add notes, conditions, or reasons..."
                   value={reviewModal.remarks}
                   onChange={(e) => setReviewModal({ ...reviewModal, remarks: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-slate-100 disabled:text-slate-400"
                 ></textarea>
               </div>
 
               <div className="flex gap-3">
                 <button
+                  type="button"
+                  disabled={isSubmittingReview}
                   onClick={submitReview}
-                  className={`flex-1 py-3 text-white font-bold rounded-xl transition ${reviewModal.actionType === 'APPROVED' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
+                  className={`flex-1 py-3 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-75 ${
+                    reviewModal.actionType === 'APPROVED' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
+                  }`}
                 >
-                  Confirm {reviewModal.actionType === 'APPROVED' ? 'Approval' : 'Rejection'}
+                  {isSubmittingReview ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      <span>
+                        {reviewModal.actionType === 'APPROVED' ? 'Approving Leave...' : 'Rejecting Leave...'}
+                      </span>
+                    </>
+                  ) : (
+                    <span>Confirm {reviewModal.actionType === 'APPROVED' ? 'Approval' : 'Rejection'}</span>
+                  )}
                 </button>
                 <button
+                  type="button"
+                  disabled={isSubmittingReview}
                   onClick={closeReviewModal}
-                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition"
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 font-bold rounded-xl transition flex items-center justify-center"
                 >
                   Cancel
                 </button>

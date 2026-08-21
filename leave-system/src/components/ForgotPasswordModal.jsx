@@ -45,7 +45,7 @@ export default function ForgotPasswordModal({ isOpen, onClose, userEmail }) {
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 backdrop-blur-sm z-40 transition-opacity"
+        className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 transition-opacity"
         onClick={handleClose}
       ></div>
 

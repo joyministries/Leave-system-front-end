@@ -3,10 +3,9 @@ import { useAuth } from '../hooks/authhook';
 import { useAlert } from '../hooks/alerthook';
 import { useEffect, useState } from 'react';
 import { getMyLeaves, getPendingLeaves } from '../services/ApiClient';
-import { getUserDisplayName } from '../utils/userUtils';
+import { getUserDisplayName, getUserInstitutionName } from '../utils/userUtils';
 import ProtectedLayout from '../components/ProtectedLayout';
 import ApprovedLeaveCard from '../components/LeaveStats';
-import ApplyLeaveModal from '../components/ApplyLeaveModal';
 
 export default function Dashboard() {
     const location = useLocation();
@@ -14,7 +13,6 @@ export default function Dashboard() {
     const { user } = useAuth();
     const { showError, showSuccess } = useAlert();
     const [leaveRequests, setLeaveRequests] = useState([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const [pendingLeaves, setPendingLeaves] = useState([]);
 
     // Get greeting based on time
@@ -27,7 +25,7 @@ export default function Dashboard() {
         return 'Good Evening';
     };
     const handleApplyLeaveClick = () => {
-        setIsModalOpen(true);
+        navigate('/apply-leave');
     };
 
     const greetingText = `${getGreeting()}, ${getUserDisplayName(user)}!`;
@@ -63,7 +61,7 @@ export default function Dashboard() {
 
     return (
         <ProtectedLayout
-            title="Team Impact University"
+            title={getUserInstitutionName(user)}
             subtitle={subtitleText}
             action={{ label: 'Apply Leave', onClick: handleApplyLeaveClick }}
             currentPath={location.pathname}
@@ -106,7 +104,7 @@ export default function Dashboard() {
                     <table className="w-full text-sm sm:text-base">
                         <thead className="bg-slate-50">
                             <tr>
-                                <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Type</th>
+                                <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Leave Type Name</th>
                                 <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Start Date</th>
                                 <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">End Date</th>
                                 <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
@@ -121,7 +119,7 @@ export default function Dashboard() {
                                     return (
                                         <tr key={request.id} className="border-t border-slate-200 hover:bg-slate-50 transition">
                                             <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-slate-900">
-                                                {formatLeaveType(request.leave_type || request.type)}
+                                                {request.leave_type_name || formatLeaveType(request.leave_type || request.type)}
                                             </td>
                                             <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-xs sm:text-sm text-slate-600">
                                                 {request.start_date ? formatDate(request.start_date) : 'N/A'}
@@ -151,32 +149,6 @@ export default function Dashboard() {
                     </table>
                 </div>
             </div>
-
-            {/* Apply Leave Modal */}
-            <ApplyLeaveModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onSubmitSuccess={() => {
-                    setIsModalOpen(false);
-                    showSuccess('Leave request submitted successfully!');
-                    // Refresh leave requests
-                    const fetchLeaveRequests = async () => {
-                        try {
-                            const data = await getMyLeaves();
-                            const leaveData = Array.isArray(data) ? data : data.results || [];
-                            const formattedLeaveData = leaveData.map(leave => ({
-                                ...leave,
-                                leave_type: formatLeaveType(leave.leave_type || leave.type)
-                            }));
-                            setLeaveRequests(formattedLeaveData);
-                        } catch (error) {
-                            console.error('Error fetching leave requests:', error);
-                            showError('Failed to refresh leave requests.');
-                        }
-                    };
-                    fetchLeaveRequests();
-                }}
-            />
         </ProtectedLayout>
     );
 }

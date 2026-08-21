@@ -340,7 +340,7 @@ export default function AdminRoleManagement() {
                 </button>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className={`overflow-x-auto transition-all duration-200 ${openMenuId ? 'min-h-[260px] pb-28' : 'min-h-[140px]'}`}>
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-100 border-b border-slate-200 text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -456,7 +456,7 @@ export default function AdminRoleManagement() {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 transition-opacity"
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 transition-opacity"
             onClick={() => setIsModalOpen(false)}
           />
 

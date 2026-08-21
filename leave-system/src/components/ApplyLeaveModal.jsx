@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAlert } from '../hooks/alerthook';
-import { applyLeave, getLeaveTypes } from '../services/ApiClient';
+import { useAuth } from '../hooks/authhook';
+import { applyLeave, getLeaveTypes, getInstitutions } from '../services/ApiClient';
 
 export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     leaveTypeName: '',
     allowedMonths: [],   // array of integers e.g. [1, 6, 12]
@@ -68,8 +70,49 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
   useEffect(() => {
     const fetchtypes = async () => {
       try {
-        const data = await getLeaveTypes();
-        const typesArray = Array.isArray(data) ? data : data.results || [];
+        const [typesRes, institutionsRes] = await Promise.allSettled([
+          getLeaveTypes(),
+          getInstitutions()
+        ]);
+        
+        let allTypes = [];
+        if (typesRes.status === 'fulfilled') {
+          const d = typesRes.value;
+          allTypes = Array.isArray(d) ? d : d.results || [];
+        }
+
+        let typesArray = allTypes;
+        
+        // Filter by branch/institution allowed leave types if employee belongs to a branch
+        if (institutionsRes.status === 'fulfilled' && user && (user.institution || user.institution_id || user.institution_name || user.branch)) {
+          const instData = institutionsRes.value?.data?.results || institutionsRes.value?.data || [];
+          const instList = Array.isArray(instData) ? instData : [];
+          
+          const userInst = instList.find(i => 
+            String(i.id) === String(user.institution) || 
+            String(i.id) === String(user.institution_id) ||
+            String(i.id) === String(user.branch) ||
+            i.name === user.institution ||
+            i.name === user.institution_name
+          );
+
+          if (userInst) {
+            const rawAllowed = Array.isArray(userInst.leave_types) 
+              ? userInst.leave_types 
+              : (Array.isArray(userInst.allowed_leave_types) ? userInst.allowed_leave_types : null);
+
+            if (Array.isArray(rawAllowed)) {
+              if (rawAllowed.length === 0) {
+                typesArray = [];
+              } else {
+                const allowedIds = rawAllowed.map(lt => typeof lt === 'object' && lt !== null ? (lt.id ?? lt.name) : lt);
+                typesArray = allTypes.filter(t => 
+                  allowedIds.some(id => String(id) === String(t.id) || String(id) === String(t.name))
+                );
+              }
+            }
+          }
+        }
         
         if (typesArray.length > 0) {
           setLeavetypes(typesArray);
@@ -87,7 +130,12 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
               : [],
           }));
         } else {
-          throw new Error('API returned empty types list');
+          setLeavetypes([]);
+          if (allTypes.length > 0) {
+            showWarning('No leave types are currently allowed for your branch. Please contact an administrator.');
+          } else {
+            showError('No leave types found.');
+          }
         }
       } catch (error) {
         console.error('Error fetching leave types from API:', error);
@@ -101,7 +149,7 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
     if (isOpen) {
       fetchtypes();
     }
-  }, [isOpen]);
+  }, [isOpen, user]);
 
   const handleChange = (e) => {
     const { name, value, type, files } = e.target;
@@ -281,7 +329,7 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSubmitSuccess }) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 backdrop-blur z-30"
+        className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 transition-opacity"
         onClick={onClose}
       ></div>
 

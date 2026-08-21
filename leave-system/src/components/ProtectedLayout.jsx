@@ -2,10 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import SideBar from './SideBar';
 import { NotificationBell } from './NotificationBell';
-import ApplyLeaveModal from './ApplyLeaveModal';
 import { useAuth } from '../hooks/authhook';
 import { useAlert } from '../hooks/alerthook';
 import { setAlertHandler } from '../services/ApiClient';
+import { getUserInstitutionName } from '../utils/userUtils';
 import { GiHamburgerMenu } from 'react-icons/gi';
 import { FaPlus } from 'react-icons/fa';
 
@@ -39,9 +39,6 @@ export default function ProtectedLayout({ children, title, subtitle, action }) {
 
   // Mobile off-canvas drawer open state (< 1024px)
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-
-  // Apply Leave Modal state
-  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
 
   // Persist desktop collapsed state to localStorage
   useEffect(() => {
@@ -122,7 +119,7 @@ export default function ProtectedLayout({ children, title, subtitle, action }) {
       <div className="flex flex-col flex-1 min-w-0 min-h-screen">
 
         {/* ─── Persistent Sticky Top Navbar ─── */}
-        <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm flex-shrink-0">
+        <header className="sticky top-0 z-20 bg-white border-b border-slate-200 shadow-sm flex-shrink-0">
           <div className="flex items-center justify-between px-4 sm:px-6 h-16">
 
             {/* Left — Hamburger Button + Institution Title */}
@@ -140,7 +137,7 @@ export default function ProtectedLayout({ children, title, subtitle, action }) {
               </button>
 
               <span className="font-black text-slate-900 text-base sm:text-lg tracking-tight truncate">
-                Team Impact Christian University
+                {title || getUserInstitutionName(user)}
               </span>
             </div>
 
@@ -149,29 +146,31 @@ export default function ProtectedLayout({ children, title, subtitle, action }) {
               {/* Notification Bell */}
               <NotificationBell />
 
-              {/* Apply Leave Action Button */}
-              {action ? (
-                typeof action === 'object' && action?.label ? (
+              {/* Top Nav Action Button (Navigates to /apply-leave unless custom action provided or on /apply-leave page) */}
+              {action !== null && location.pathname !== '/apply-leave' && (
+                action ? (
+                  typeof action === 'object' && action?.label ? (
+                    <button
+                      onClick={action.onClick}
+                      className="px-3 sm:px-4 py-2 bg-slate-900 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all text-xs sm:text-sm min-h-[38px] flex items-center justify-center gap-1.5 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    >
+                      <FaPlus className="text-xs" aria-hidden="true" />
+                      <span className="hidden sm:inline">{action.label}</span>
+                    </button>
+                  ) : (
+                    action
+                  )
+                ) : (
                   <button
-                    onClick={action.onClick}
+                    onClick={() => navigate('/apply-leave')}
                     className="px-3 sm:px-4 py-2 bg-slate-900 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all text-xs sm:text-sm min-h-[38px] flex items-center justify-center gap-1.5 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    aria-label="Apply Leave"
+                    title="Apply for Leave"
                   >
                     <FaPlus className="text-xs" aria-hidden="true" />
-                    <span className="hidden sm:inline">{action.label}</span>
+                    <span className="hidden sm:inline">Apply Leave</span>
                   </button>
-                ) : (
-                  action
                 )
-              ) : (
-                <button
-                  onClick={() => setIsApplyModalOpen(true)}
-                  className="px-3 sm:px-4 py-2 bg-slate-900 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all text-xs sm:text-sm min-h-[38px] flex items-center justify-center gap-1.5 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                  aria-label="Apply Leave"
-                  title="Apply for Leave"
-                >
-                  <FaPlus className="text-xs" aria-hidden="true" />
-                  <span className="hidden sm:inline">Apply Leave</span>
-                </button>
               )}
             </div>
           </div>
@@ -189,16 +188,6 @@ export default function ProtectedLayout({ children, title, subtitle, action }) {
           {children}
         </main>
       </div>
-
-      {/* Global Apply Leave Modal */}
-      <ApplyLeaveModal
-        isOpen={isApplyModalOpen}
-        onClose={() => setIsApplyModalOpen(false)}
-        onSubmitSuccess={() => {
-          setIsApplyModalOpen(false);
-          window.location.reload();
-        }}
-      />
     </div>
   );
 }

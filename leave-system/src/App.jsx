@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
+import ApplyLeave from "./pages/ApplyLeave.jsx";
 import MyRequests from "./pages/MyRequests.jsx";
 import History from "./pages/History.jsx";
 import LeaveCalendar from "./pages/LeaveCalendar.jsx";
@@ -22,6 +23,7 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       {/* Protected Employee Routes */}
       <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/apply-leave" element={<ApplyLeave />} />
       <Route path="/my-requests" element={<MyRequests />} />
       <Route path="/history" element={<History />} />
       <Route path="/calendar" element={<LeaveCalendar />} />
