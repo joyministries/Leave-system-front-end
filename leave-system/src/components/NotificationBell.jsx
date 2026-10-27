@@ -155,10 +155,18 @@ export const NotificationBell = () => {
       // Animate all out, then clear
       const allIds = notifications.map((n) => n.id);
       setRemovingIds(new Set(allIds));
-      setTimeout(() => {
+      setTimeout(async () => {
         setNotifications([]);
         setRemovingIds(new Set());
-        setUnreadCount(0);
+        // Re-fetch the real count from the server to stay in sync with the
+        // 15 s poller; avoids the badge reappearing if the poller fires before
+        // the local state fully settles.
+        try {
+          const res = await getUnreadNotificationCount();
+          setUnreadCount(res.data.unread_count || 0);
+        } catch {
+          setUnreadCount(0);
+        }
       }, 300);
     } catch (err) {
       console.error('Failed to mark all read', err);
